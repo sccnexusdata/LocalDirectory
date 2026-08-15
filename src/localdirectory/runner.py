@@ -24,7 +24,8 @@ class DirectoryRunner:
         self.offline = offline
         self.timeout = int(os.getenv("LOCALDIRECTORY_TIMEOUT_SECONDS", "30"))
         self.user_agent = os.getenv(
-            "LOCALDirectory/0.1 (+https://github.com/sccnexusdata/LocalDirectory)",
+            "LOCALDIRECTORY_USER_AGENT",
+            "LocalDirectory/0.1 (+https://github.com/sccnexusdata/LocalDirectory)",
         )
 
     def run(self) -> Path:
