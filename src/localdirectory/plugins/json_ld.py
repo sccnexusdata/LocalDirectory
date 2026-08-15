@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import requests
@@ -14,7 +15,7 @@ from localdirectory.text import normalise_postcode
 
 class JSONLDPlugin:
     name = "json_ld"
-    TYPES = {"LocalBusiness", "Organization", "ProfessionalService", "Store", "Restaurant", "FoodEstablishment", "MedicalBusiness", "HomeAndConstructionBusiness"}
+    TYPES: ClassVar[set[str]] = {"LocalBusiness", "Organization", "ProfessionalService", "Store", "Restaurant", "FoodEstablishment", "MedicalBusiness", "HomeAndConstructionBusiness"}
 
     def __init__(self, urls: list[str], timeout: int = 30, user_agent: str = "LocalDirectory/0.1"):
         self.urls = [u for u in urls if u]

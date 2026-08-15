@@ -48,15 +48,18 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
             core_ok = False
             flags.add("registered_company_requires_trading_corroboration")
 
-        publish = False
-        if record.manual_verified and core_ok:
-            publish = True
-        elif allow_class_a_single and official and core_ok and record.listing_type != "registered_company":
-            publish = True
-        elif independent_sources >= min_sources and core_ok and (official or owned or "C" in source_classes or "D" in source_classes):
-            publish = True
-        elif owned and core_ok and (record.website and (record.phone or record.address)):
-            publish = True
+        publish = bool(
+            core_ok
+            and (
+                record.manual_verified
+                or (allow_class_a_single and official and record.listing_type != "registered_company")
+                or (
+                    independent_sources >= min_sources
+                    and (official or owned or "C" in source_classes or "D" in source_classes)
+                )
+                or (owned and bool(record.website and (record.phone or record.address)))
+            )
+        )
 
         if "outside_radius" in flags or "missing_name" in flags:
             publish = False

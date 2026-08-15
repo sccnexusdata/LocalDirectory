@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from difflib import SequenceMatcher
 import hashlib
+from difflib import SequenceMatcher
 
 from localdirectory.models import ListingRecord, SourceRef
 from localdirectory.text import domain, normalise_name, normalise_phone, normalise_postcode
@@ -42,9 +42,10 @@ def likely_same_entity(a: ListingRecord, b: ListingRecord) -> bool:
     a_pc, b_pc = normalise_postcode(a.postcode), normalise_postcode(b.postcode)
     if a_pc and b_pc and a_pc == b_pc and ratio >= 0.72:
         return True
-    if ratio >= 0.92 and (a.primary_category == b.primary_category or "other" in {a.primary_category, b.primary_category}):
-        return True
-    return False
+    return ratio >= 0.92 and (
+        a.primary_category == b.primary_category
+        or "other" in {a.primary_category, b.primary_category}
+    )
 
 
 def _merge_into(target: ListingRecord, incoming: ListingRecord) -> None:
