@@ -11,7 +11,7 @@ on:
     - cron: "35 6 * * 1"
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -75,6 +75,28 @@ jobs:
           cp "$ROOT/source-provenance.json" "$ROOT/internal-audit/"
           cp "$ROOT/review-queue.json" "$ROOT/internal-audit/"
           cp "$ROOT/project-health.json" "$ROOT/internal-audit/"
+      - name: Stage latest governed LewesLive feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${{ steps.locate.outputs.root }}"
+          mkdir -p published/leweslive
+          cp "$ROOT/leweslive/directory.v1.json" published/leweslive/directory.v1.json
+          cp "$ROOT/leweslive/directory.v1.js" published/leweslive/directory.v1.js
+          cp "$ROOT/leweslive/manifest.v1.json" published/leweslive/manifest.v1.json
+      - name: Commit latest governed feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- published/leweslive; then
+            echo "Governed feed unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add published/leweslive
+          git commit -m "data: refresh governed LewesLive directory feed"
+          git push
       - name: Upload public build
         uses: actions/upload-artifact@v4
         with:
