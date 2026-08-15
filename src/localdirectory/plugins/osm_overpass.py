@@ -39,7 +39,8 @@ class OSMOverpassPlugin:
             lat, lon = _coords(element)
             category = category_from_terms(
                 tags.get("shop", ""), tags.get("amenity", ""), tags.get("craft", ""),
-                tags.get("office", ""), tags.get("healthcare", ""), tags.get("tourism", "")
+                tags.get("office", ""), tags.get("healthcare", ""), tags.get("tourism", ""),
+                tags.get("leisure", "")
             )
             if category == "other":
                 continue
@@ -110,8 +111,9 @@ class OSMOverpassPlugin:
             '["craft"]',
             '["office"]',
             '["healthcare"]',
-            '["tourism"~"hotel|guest_house|hostel"]',
-            '["amenity"~"restaurant|cafe|pub|bar|fast_food|pharmacy|clinic|dentist|veterinary|bank|post_office|library|community_centre|social_centre"]',
+            '["tourism"~"hotel|guest_house|hostel|motel|camp_site|chalet|apartment"]',
+            '["leisure"~"fitness_centre|sports_centre"]',
+            '["amenity"~"restaurant|cafe|pub|bar|fast_food|pharmacy|clinic|doctors|dentist|veterinary|bank|post_office|library|community_centre|social_centre|childcare|kindergarten|school|fuel|car_rental|car_wash"]',
         ]
         clauses = []
         for filt in filters:
@@ -149,6 +151,9 @@ def _address(tags: dict) -> str:
 
 
 def _description(tags: dict) -> str:
-    kinds = [tags.get("shop"), tags.get("amenity"), tags.get("craft"), tags.get("office"), tags.get("healthcare"), tags.get("tourism")]
+    kinds = [
+        tags.get("shop"), tags.get("amenity"), tags.get("craft"), tags.get("office"),
+        tags.get("healthcare"), tags.get("tourism"), tags.get("leisure"),
+    ]
     kind = next((k for k in kinds if k), "local place").replace("_", " ")
     return f"OpenStreetMap-listed {kind}; operational details should be checked with the provider."
