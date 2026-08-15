@@ -24,8 +24,7 @@ class DirectoryRunner:
         self.offline = offline
         self.timeout = int(os.getenv("LOCALDIRECTORY_TIMEOUT_SECONDS", "30"))
         self.user_agent = os.getenv(
-            "LOCALDIRECTORY_USER_AGENT",
-            "LocalDirectory/0.1 (+https://github.com/sccnexusdata/LocalDirectory)",
+            "LOCALDirectory/0.1 (+https://github.com/sccnexusdata/LocalDirectory)",
         )
 
     def run(self) -> Path:
@@ -183,7 +182,7 @@ class DirectoryRunner:
         for record in records:
             if record.website:
                 grouped[record.primary_category].append((record.name.casefold(), record.website))
-        for _, entries in grouped.items():
+        for entries in grouped.values():
             entries.sort()
 
         # Trade/service sectors need deliberate corroboration because public registers
