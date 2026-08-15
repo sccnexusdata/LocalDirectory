@@ -40,7 +40,11 @@ sources:
     - json_ld
   manual_csv: data/manual/listings.csv
   websites: []
-  json_ld_max_websites: 60
+  json_ld_max_websites: 120
+  json_ld_trade_per_category: 10
+  json_ld_workers: 6
   json_ld_timeout_seconds: 12
+  postcode_enrichment: true
+  postcode_timeout_seconds: 20
   overpass_endpoint: https://overpass-api.de/api/interpreter
   companies_house_max_results: 500
