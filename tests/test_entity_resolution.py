@@ -88,3 +88,66 @@ def test_distinct_source_objects_receive_unique_ids_even_when_names_normalise_sa
     merged = merge_records([a, b])
     assert len(merged) == 2
     assert len({record.listing_id for record in merged}) == 2
+
+
+def test_local_description_and_address_variants_are_non_blocking():
+    fhrs = ListingRecord(
+        name="Caffe Nero",
+        postcode="BN7 1XG",
+        address="61B - 62 High Street, Lewes, East Sussex",
+        description="Restaurant/Cafe/Canteen. Food hygiene record.",
+        latitude=50.87260,
+        longitude=0.00938,
+        primary_category="food_and_drink",
+        sources=[SourceRef("Food Standards Agency FHRS", "official_register", "A", source_id="1952369")],
+    )
+    osm = ListingRecord(
+        name="Caffè Nero",
+        postcode="BN7 1XG",
+        address="62 High Street, Lewes",
+        description="Coffee shop",
+        website="https://www.caffenero.com/uk/stores/lewes",
+        latitude=50.87261,
+        longitude=0.00939,
+        primary_category="food_and_drink",
+        sources=[source("OpenStreetMap", "node/352842550")],
+    )
+    merged = merge_records([fhrs, osm])[0]
+    assert "field_variation:description" in merged.quality_flags
+    assert "field_variation:address" in merged.quality_flags
+    assert not any(flag.startswith("field_conflict:") for flag in merged.quality_flags)
+    assert merged.website.endswith("/lewes")
+
+
+def test_conflicting_phone_remains_blocking_evidence():
+    a = ListingRecord(
+        name="Example Business",
+        postcode="BN7 2AA",
+        phone="01273 111111",
+        sources=[source("official", "1", "A")],
+    )
+    b = ListingRecord(
+        name="Example Business",
+        postcode="BN7 2AA",
+        phone="01273 222222",
+        sources=[source("owned", "2", "B")],
+    )
+    merged = merge_records([a, b])[0]
+    assert "field_conflict:phone" in merged.quality_flags
+
+
+def test_more_specific_local_source_can_refine_broad_fhrs_category():
+    fhrs = ListingRecord(
+        name="Example Pharmacy",
+        postcode="BN7 2AA",
+        primary_category="shops",
+        sources=[SourceRef("Food Standards Agency FHRS", "official_register", "A", source_id="1")],
+    )
+    osm = ListingRecord(
+        name="Example Pharmacy",
+        postcode="BN7 2AA",
+        primary_category="health_care",
+        sources=[source("OpenStreetMap", "node/1")],
+    )
+    merged = merge_records([fhrs, osm])[0]
+    assert merged.primary_category == "health_care"
