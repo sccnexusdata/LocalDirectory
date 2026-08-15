@@ -20,7 +20,7 @@ CATEGORY_ALIASES = {
         "motel", "campground", "camp_site", "resort", "chalet", "apartment",
     },
     "education_childcare": {
-        "school", "college", "university", "nursery", "childcare", "childcare", "kindergarten",
+        "school", "college", "university", "nursery", "childcare", "kindergarten",
         "preschool", "educationalorganization",
     },
     "builders_general_trades": {
