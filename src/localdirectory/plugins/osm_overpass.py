@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import time
+
 import requests
 
 from localdirectory.models import ListingRecord, SourceRef
 from localdirectory.plugins.base import HarvestResult
 from localdirectory.taxonomy import category_from_terms
 from localdirectory.text import normalise_postcode
+
+
+DEFAULT_OVERPASS_ENDPOINTS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+)
 
 
 class OSMOverpassPlugin:
@@ -21,14 +29,7 @@ class OSMOverpassPlugin:
 
     def harvest(self) -> HarvestResult:
         query = self._query()
-        response = requests.post(
-            self.endpoint,
-            data={"data": query},
-            headers={"Accept": "application/json", "User-Agent": self.user_agent},
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        payload, endpoint, attempts = self._request_payload(query)
         records: list[ListingRecord] = []
         for element in payload.get("elements", []):
             tags = element.get("tags") or {}
@@ -65,7 +66,42 @@ class OSMOverpassPlugin:
                     review_required=True,
                 )
             )
-        return HarvestResult(self.name, records, True, f"Harvested {len(records)} OpenStreetMap candidates", 1)
+        message = f"Harvested {len(records)} OpenStreetMap candidates via {endpoint}"
+        if attempts > 1:
+            message += f" after {attempts} endpoint attempts"
+        return HarvestResult(self.name, records, True, message, attempts)
+
+    def _request_payload(self, query: str) -> tuple[dict, str, int]:
+        endpoints = _ordered_endpoints(self.endpoint)
+        failures: list[str] = []
+        attempts = 0
+        for endpoint_index, endpoint in enumerate(endpoints):
+            # One retry per endpoint handles short-lived 429/5xx/load-shedding events.
+            for retry in range(2):
+                attempts += 1
+                try:
+                    response = requests.post(
+                        endpoint,
+                        data={"data": query},
+                        headers={
+                            "Accept": "application/json",
+                            "Accept-Encoding": "gzip, deflate",
+                            "User-Agent": self.user_agent,
+                        },
+                        timeout=self.timeout,
+                    )
+                    response.raise_for_status()
+                    payload = response.json()
+                    if not isinstance(payload, dict) or "elements" not in payload:
+                        raise ValueError("Overpass response did not contain an elements array")
+                    return payload, endpoint, attempts
+                except (requests.RequestException, ValueError) as exc:
+                    failures.append(f"{endpoint}: {type(exc).__name__}: {exc}")
+                    if retry == 0:
+                        time.sleep(1)
+            if endpoint_index < len(endpoints) - 1:
+                time.sleep(1)
+        raise RuntimeError("All Overpass endpoints failed: " + " | ".join(failures))
 
     def _query(self) -> str:
         radius, lat, lon = self.radius_m, self.latitude, self.longitude
@@ -82,6 +118,16 @@ class OSMOverpassPlugin:
             for kind in ("node", "way", "relation"):
                 clauses.append(f"{kind}{filt}(around:{radius},{lat},{lon});")
         return "[out:json][timeout:40];(" + "".join(clauses) + ");out center tags;"
+
+
+def _ordered_endpoints(configured: str) -> list[str]:
+    ordered = [configured, *DEFAULT_OVERPASS_ENDPOINTS]
+    result: list[str] = []
+    for endpoint in ordered:
+        cleaned = endpoint.strip().rstrip("/")
+        if cleaned and cleaned not in result:
+            result.append(cleaned)
+    return result
 
 
 def _coords(element: dict) -> tuple[float | None, float | None]:
