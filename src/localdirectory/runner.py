@@ -183,8 +183,8 @@ class DirectoryRunner:
         for record in records:
             if record.website:
                 grouped[record.primary_category].append((record.name.casefold(), record.website))
-        for category in grouped:
-            grouped[category].sort()
+        for _, entries in grouped.items():
+            entries.sort()
 
         # Trade/service sectors need deliberate corroboration because public registers
         # naturally over-represent food establishments and physical retail.
