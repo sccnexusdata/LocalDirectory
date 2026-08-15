@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+from collections import defaultdict, deque
 from dataclasses import asdict
 from pathlib import Path
 from urllib.parse import urlparse
 
 from localdirectory.config import DirectoryConfig
-from localdirectory.coverage import build_coverage_report
+from localdirectory.coverage import PRIORITY_CATEGORIES, TRADE_CATEGORIES, build_coverage_report
 from localdirectory.entity_resolution import merge_records
 from localdirectory.exporters import export_leweslive, export_public, write_csv, write_geojson, write_json
 from localdirectory.models import ListingRecord, utc_now_iso
@@ -41,9 +42,17 @@ class DirectoryRunner:
         if not self.offline and self._source_enabled("json_ld"):
             json_ld_urls = self._json_ld_urls(all_records)
             json_ld_timeout = int(self.config.source_config.get("json_ld_timeout_seconds", min(self.timeout, 15)))
-            result = self._harvest(JSONLDPlugin(json_ld_urls, json_ld_timeout, self.user_agent))
+            json_ld_workers = int(self.config.source_config.get("json_ld_workers", 6))
+            result = self._harvest(
+                JSONLDPlugin(
+                    json_ld_urls,
+                    json_ld_timeout,
+                    self.user_agent,
+                    max_workers=json_ld_workers,
+                )
+            )
             if json_ld_urls:
-                result.message = f"Queued {len(json_ld_urls)} discovered/configured websites. {result.message}"
+                result.message = f"Queued {len(json_ld_urls)} category-balanced websites. {result.message}"
             else:
                 result.message = "No eligible discovered/configured websites were available for JSON-LD enrichment"
             results.append(result)
@@ -146,24 +155,71 @@ class DirectoryRunner:
 
     def _json_ld_urls(self, records: list[ListingRecord]) -> list[str]:
         sources = self.config.source_config
-        candidates = [*list(sources.get("websites", [])), *(record.website for record in records if record.website)]
-        maximum = max(0, int(sources.get("json_ld_max_websites", 60)))
+        maximum = max(0, int(sources.get("json_ld_max_websites", 120)))
         if maximum == 0:
             return []
+        trade_cap = max(0, int(sources.get("json_ld_trade_per_category", 10)))
         seen: set[str] = set()
         urls: list[str] = []
-        for candidate in candidates:
+
+        def add(candidate: str) -> bool:
             value = str(candidate or "").strip()
             parsed = urlparse(value)
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-                continue
+                return False
             normalised = value.rstrip("/")
             key = normalised.casefold()
             if key in seen:
-                continue
+                return False
             seen.add(key)
             urls.append(normalised)
-            if len(urls) >= maximum:
+            return len(urls) >= maximum
+
+        for configured in sources.get("websites", []):
+            if add(str(configured)):
+                return urls
+
+        grouped: dict[str, list[tuple[str, str]]] = defaultdict(list)
+        for record in records:
+            if record.website:
+                grouped[record.primary_category].append((record.name.casefold(), record.website))
+        for category in grouped:
+            grouped[category].sort()
+
+        # Trade/service sectors need deliberate corroboration because public registers
+        # naturally over-represent food establishments and physical retail.
+        for category in TRADE_CATEGORIES:
+            added = 0
+            for _, website in grouped.get(category, []):
+                before = len(urls)
+                if add(website):
+                    return urls
+                if len(urls) > before:
+                    added += 1
+                if added >= trade_cap:
+                    break
+
+        ordered_categories = [
+            *TRADE_CATEGORIES,
+            *(category for category in PRIORITY_CATEGORIES if category not in TRADE_CATEGORIES),
+            *(category for category in sorted(grouped) if category not in PRIORITY_CATEGORIES),
+        ]
+        buckets = {category: deque(grouped.get(category, [])) for category in ordered_categories}
+        while len(urls) < maximum and any(buckets.values()):
+            progressed = False
+            for category in ordered_categories:
+                bucket = buckets[category]
+                while bucket:
+                    _, website = bucket.popleft()
+                    before = len(urls)
+                    if add(website):
+                        return urls
+                    if len(urls) > before:
+                        progressed = True
+                        break
+                if len(urls) >= maximum:
+                    return urls
+            if not progressed:
                 break
         return urls
 
