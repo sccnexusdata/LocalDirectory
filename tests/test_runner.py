@@ -60,3 +60,31 @@ def test_json_ld_queue_uses_discovered_websites_and_cap(tmp_path):
         "https://one.example",
         "https://two.example/path",
     ]
+
+
+def test_json_ld_queue_prioritises_trade_websites_before_food(tmp_path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        yaml.safe_dump({
+            "project": {"name": "Test", "slug": "test"},
+            "location": {"name": "Lewes", "latitude": 50.8739, "longitude": 0.0088, "radius_km": 10},
+            "sources": {
+                "json_ld_max_websites": 4,
+                "json_ld_trade_per_category": 2,
+            },
+        }),
+        encoding="utf-8",
+    )
+    runner = DirectoryRunner(load_config(config_path))
+    records = [
+        ListingRecord(name="Food A", primary_category="food_and_drink", website="https://food-a.example"),
+        ListingRecord(name="Food B", primary_category="food_and_drink", website="https://food-b.example"),
+        ListingRecord(name="Builder A", primary_category="builders_general_trades", website="https://builder-a.example"),
+        ListingRecord(name="Builder B", primary_category="builders_general_trades", website="https://builder-b.example"),
+        ListingRecord(name="Garage A", primary_category="garages_vehicle_services", website="https://garage-a.example"),
+    ]
+
+    urls = runner._json_ld_urls(records)
+    assert urls[:2] == ["https://builder-a.example", "https://builder-b.example"]
+    assert "https://garage-a.example" in urls
+    assert len(urls) == 4
