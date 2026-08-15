@@ -56,7 +56,7 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
             flags.add("registered_company_requires_trading_corroboration")
 
         blocking_conflict = any(
-            flag.startswith("field_conflict:") or flag.startswith("entity_resolution_conflict:")
+            flag.startswith(("field_conflict:", "entity_resolution_conflict:"))
             for flag in flags
         )
         if blocking_conflict:
