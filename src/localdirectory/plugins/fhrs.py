@@ -52,7 +52,7 @@ class FHRSPlugin:
                 record = ListingRecord(
                     name=str(item.get("BusinessName") or "").strip(),
                     listing_type="place",
-                    primary_category=category_from_terms(str(item.get("BusinessType") or ""), "food"),
+                    primary_category=_directory_category(item),
                     description=_description(item),
                     phone=str(item.get("Phone") or "").strip(),
                     address=", ".join(str(x).strip() for x in address_parts if x),
@@ -73,6 +73,22 @@ class FHRSPlugin:
             if page > 20:
                 break
         return HarvestResult(self.name, records, True, f"Harvested {len(records)} FHRS establishments", requests_made)
+
+
+def _directory_category(item: dict) -> str:
+    business_type = str(item.get("BusinessType") or "").casefold()
+    name = str(item.get("BusinessName") or "")
+    if "school/college/university" in business_type:
+        return "education_childcare"
+    if "hotel/bed & breakfast/guest house" in business_type:
+        return "accommodation"
+    if "manufacturers/packers" in business_type or "farmers/growers" in business_type:
+        return "food_producers"
+    if "caring premises" in business_type:
+        return "health_care"
+    if "cater" in business_type:
+        return "food_and_drink"
+    return category_from_terms(name, business_type)
 
 
 def _description(item: dict) -> str:
