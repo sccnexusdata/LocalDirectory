@@ -7,6 +7,15 @@ on:
         description: "Configuration path"
         required: false
         default: "config/lewes.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "config/**"
+      - "scripts/**"
+      - "data/manual/**"
+      - ".github/workflows/weekly_update.yml"
   schedule:
     - cron: "35 6 * * 1"
 
