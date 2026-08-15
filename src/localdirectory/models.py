@@ -50,12 +50,14 @@ class ListingRecord:
     email_public: bool = True
     manual_verified: bool = False
     quality_flags: list[str] = field(default_factory=list)
+    field_provenance: dict[str, list[str]] = field(default_factory=dict)
     listing_id: str = ""
 
     def to_dict(self, public: bool = False) -> dict[str, Any]:
         data = asdict(self)
         if public:
             data.pop("manual_verified", None)
+            data.pop("field_provenance", None)
             if not self.address_public:
                 data["address"] = ""
                 data["postcode"] = ""
