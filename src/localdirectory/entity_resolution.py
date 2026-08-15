@@ -14,11 +14,7 @@ HARD_LOCATION_CONFLICT_KM = 0.75
 
 
 def listing_identity(record: ListingRecord) -> str:
-    """Return a source-anchored identity that is not rewritten by enrichment.
-
-    A stable upstream identifier is preferred. The spatial/name fallback is only used
-    for records whose source has no durable identifier.
-    """
+    """Return a source-anchored identity that is not rewritten by enrichment."""
     source_seed = ""
     if record.sources:
         source = record.sources[0]
@@ -57,8 +53,6 @@ def merge_records(records: list[ListingRecord]) -> list[ListingRecord]:
             merged.append(record)
         else:
             _merge_into(match, record)
-            # Deliberately retain the original source-anchored listing_id. Enrichment
-            # must never rewrite a public identifier.
     return merged
 
 
@@ -91,14 +85,11 @@ def likely_same_entity(a: ListingRecord, b: ListingRecord) -> bool:
     if same_address and ratio >= 0.72:
         return True
 
-    # Strong organisation/contact matches still need local establishment evidence.
     strong_org_signal = _same_company(a, b) or _same_domain(a, b) or _same_phone(a, b)
     local_evidence = same_postcode or near or same_address or _shared_service_area(a, b)
     if strong_org_signal and local_evidence and ratio >= 0.80:
         return True
 
-    # Service providers without a public premises can be reconciled when both the
-    # business identity and explicitly declared service area agree.
     return (
         a.listing_type == "service_provider"
         and b.listing_type == "service_provider"
@@ -111,6 +102,7 @@ def likely_same_entity(a: ListingRecord, b: ListingRecord) -> bool:
 def _merge_into(target: ListingRecord, incoming: ListingRecord) -> None:
     _ensure_field_provenance(target)
     _ensure_field_provenance(incoming)
+    local_match = _same_postcode(target, incoming) or _nearby(target, incoming, NEARBY_MATCH_KM)
 
     for field_name in ("description", "website", "phone", "email", "address", "postcode", "company_number"):
         current = getattr(target, field_name)
@@ -118,14 +110,22 @@ def _merge_into(target: ListingRecord, incoming: ListingRecord) -> None:
         if not current and new:
             setattr(target, field_name, new)
             target.field_provenance[field_name] = list(incoming.field_provenance.get(field_name, []))
-        elif current and new:
-            if _equivalent_field_value(field_name, current, new):
-                target.field_provenance[field_name] = _merge_labels(
-                    target.field_provenance.get(field_name, []),
-                    incoming.field_provenance.get(field_name, []),
-                )
-            else:
-                target.quality_flags.append(f"field_conflict:{field_name}")
+            continue
+        if not (current and new):
+            continue
+        if _equivalent_field_value(field_name, current, new):
+            target.field_provenance[field_name] = _merge_labels(
+                target.field_provenance.get(field_name, []),
+                incoming.field_provenance.get(field_name, []),
+            )
+            continue
+        if field_name == "description":
+            target.quality_flags.append("field_variation:description")
+            continue
+        if field_name == "address" and local_match:
+            target.quality_flags.append("field_variation:address")
+            continue
+        target.quality_flags.append(f"field_conflict:{field_name}")
 
     if target.latitude is None and incoming.latitude is not None:
         target.latitude = incoming.latitude
@@ -146,8 +146,7 @@ def _merge_into(target: ListingRecord, incoming: ListingRecord) -> None:
         elif distance > HARD_LOCATION_CONFLICT_KM:
             target.quality_flags.append("entity_resolution_conflict:coordinates")
 
-    if target.primary_category == "other" and incoming.primary_category != "other":
-        target.primary_category = incoming.primary_category
+    _refine_category(target, incoming)
     if target.listing_type == "registered_company" and incoming.listing_type != "registered_company":
         target.listing_type = incoming.listing_type
     target.service_area = sorted(set(target.service_area + incoming.service_area))
@@ -159,6 +158,22 @@ def _merge_into(target: ListingRecord, incoming: ListingRecord) -> None:
     target.email_public = target.email_public and incoming.email_public
     target.quality_flags = sorted(set(target.quality_flags + incoming.quality_flags))
     target.last_seen = max(target.last_seen, incoming.last_seen)
+
+
+def _refine_category(target: ListingRecord, incoming: ListingRecord) -> None:
+    if incoming.primary_category == "other":
+        return
+    if target.primary_category == "other":
+        target.primary_category = incoming.primary_category
+        return
+    if target.primary_category == incoming.primary_category:
+        return
+    target_is_fhrs_only = bool(target.sources) and all(
+        source.source_name == "Food Standards Agency FHRS" for source in target.sources
+    )
+    incoming_is_more_specific = incoming.primary_category not in {"food_and_drink", "shops"}
+    if target_is_fhrs_only and incoming_is_more_specific:
+        target.primary_category = incoming.primary_category
 
 
 def _same_source_object(a: ListingRecord, b: ListingRecord) -> bool:

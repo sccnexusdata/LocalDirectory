@@ -3,7 +3,10 @@ from __future__ import annotations
 CATEGORY_ALIASES = {
     "beauty_and_hair": {"hairdresser", "beauty", "barber", "beauty_salon", "nails"},
     "food_and_drink": {"restaurant", "cafe", "pub", "bar", "fast_food", "food", "bakery"},
+    "food_producers": {"food_producer", "food_manufacturer", "farm_shop"},
     "shops": {"shop", "retail", "clothes", "convenience", "supermarket", "books", "gift"},
+    "accommodation": {"hotel", "guest_house", "bed_and_breakfast", "hostel"},
+    "education_childcare": {"school", "college", "university", "nursery", "childcare"},
     "builders_general_trades": {"builder", "handyman", "construction"},
     "plumbers_heating": {"plumber", "heating", "hvac"},
     "electricians": {"electrician", "electrical"},
