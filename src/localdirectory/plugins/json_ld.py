@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from typing import ClassVar
 from urllib.parse import urljoin
 
@@ -11,6 +13,12 @@ from localdirectory.models import ListingRecord, SourceRef
 from localdirectory.plugins.base import HarvestResult
 from localdirectory.taxonomy import category_from_terms
 from localdirectory.text import normalise_postcode
+
+
+@dataclass(slots=True)
+class _FetchResult:
+    records: list[ListingRecord]
+    error: str = ""
 
 
 class JSONLDPlugin:
@@ -71,33 +79,64 @@ class JSONLDPlugin:
         "TouristInformationCenter",
     }
 
-    def __init__(self, urls: list[str], timeout: int = 30, user_agent: str = "LocalDirectory/0.1"):
+    def __init__(
+        self,
+        urls: list[str],
+        timeout: int = 30,
+        user_agent: str = "LocalDirectory/0.1",
+        max_workers: int = 6,
+    ):
         self.urls = [u for u in urls if u]
         self.timeout = timeout
         self.user_agent = user_agent
+        self.max_workers = max(1, min(int(max_workers), 12))
 
     def harvest(self) -> HarvestResult:
+        if not self.urls:
+            return HarvestResult(self.name, [], True, "No websites queued for JSON-LD enrichment", 0)
+
         records: list[ListingRecord] = []
-        requests_made = 0
         errors: list[str] = []
-        for url in self.urls:
-            try:
-                response = requests.get(url, headers={"User-Agent": self.user_agent}, timeout=self.timeout)
-                requests_made += 1
-                response.raise_for_status()
-                soup = BeautifulSoup(response.text, "html.parser")
-                for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
-                    try:
-                        data = json.loads(script.string or script.get_text() or "null")
-                    except json.JSONDecodeError:
-                        continue
-                    for obj in _objects(data):
-                        record = _record(obj, response.url)
-                        if record:
-                            records.append(record)
-            except requests.RequestException as exc:
-                errors.append(f"{url}: {exc.__class__.__name__}")
-        return HarvestResult(self.name, records, not (self.urls and len(errors) == len(self.urls)), "; ".join(errors) if errors else f"Harvested {len(records)} JSON-LD records", requests_made)
+        with ThreadPoolExecutor(max_workers=min(self.max_workers, len(self.urls))) as executor:
+            for result in executor.map(self._fetch_one, self.urls):
+                records.extend(result.records)
+                if result.error:
+                    errors.append(result.error)
+
+        successful_requests = len(self.urls) - len(errors)
+        if errors:
+            message = (
+                f"Harvested {len(records)} JSON-LD records from {successful_requests}/{len(self.urls)} websites; "
+                f"{len(errors)} request failure(s): " + "; ".join(errors[:12])
+            )
+        else:
+            message = f"Harvested {len(records)} JSON-LD records from {len(self.urls)} websites"
+        return HarvestResult(
+            self.name,
+            records,
+            not (self.urls and len(errors) == len(self.urls)),
+            message,
+            len(self.urls),
+        )
+
+    def _fetch_one(self, url: str) -> _FetchResult:
+        try:
+            response = requests.get(url, headers={"User-Agent": self.user_agent}, timeout=self.timeout)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+            records: list[ListingRecord] = []
+            for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+                try:
+                    data = json.loads(script.string or script.get_text() or "null")
+                except json.JSONDecodeError:
+                    continue
+                for obj in _objects(data):
+                    record = _record(obj, response.url)
+                    if record:
+                        records.append(record)
+            return _FetchResult(records)
+        except requests.RequestException as exc:
+            return _FetchResult([], f"{url}: {exc.__class__.__name__}")
 
 
 def _objects(data):
@@ -131,7 +170,12 @@ def _record(obj: dict, source_url: str) -> ListingRecord | None:
         address = address_obj
         postcode = ""
     else:
-        parts = [address_obj.get("streetAddress"), address_obj.get("addressLocality"), address_obj.get("addressRegion"), address_obj.get("postalCode")]
+        parts = [
+            address_obj.get("streetAddress"),
+            address_obj.get("addressLocality"),
+            address_obj.get("addressRegion"),
+            address_obj.get("postalCode"),
+        ]
         address = ", ".join(str(p).strip() for p in parts if p)
         postcode = normalise_postcode(str(address_obj.get("postalCode") or ""))
     geo = obj.get("geo") or {}
