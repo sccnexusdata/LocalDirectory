@@ -8,16 +8,25 @@ from pathlib import Path
 def build(exports_dir: Path) -> dict:
     quality = json.loads((exports_dir / "quality-report.json").read_text(encoding="utf-8"))
     health = json.loads((exports_dir / "source-health.json").read_text(encoding="utf-8"))
+    coverage_path = exports_dir / "coverage-report.json"
+    coverage = json.loads(coverage_path.read_text(encoding="utf-8")) if coverage_path.exists() else {}
+
     failed = [item["source"] for item in health.get("sources", []) if not item.get("ok")]
     summary = quality.get("summary", {})
     total = int(summary.get("total", 0))
     published = int(summary.get("publish_safe", 0))
+    coverage_ready = bool(coverage.get("ready", True))
+    failed_coverage = [name for name, passed in coverage.get("checks", {}).items() if not passed]
+
     return {
-        "status": "degraded" if failed else "healthy",
+        "status": "healthy" if not failed and coverage_ready else "degraded",
         "total_records": total,
         "publish_safe_records": published,
         "publication_rate": round(published / total, 4) if total else 0.0,
         "failed_sources": failed,
+        "coverage_ready": coverage_ready,
+        "failed_coverage_checks": failed_coverage,
+        "coverage_metrics": coverage.get("metrics", {}),
     }
 
 
