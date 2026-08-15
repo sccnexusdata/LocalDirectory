@@ -167,7 +167,11 @@ class DirectoryRunner:
             parsed = urlparse(value)
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                 return False
-            normalised = value.rstrip("/")
+            normalised = parsed._replace(
+                scheme=parsed.scheme.casefold(),
+                netloc=parsed.netloc.casefold(),
+                fragment="",
+            ).geturl().rstrip("/")
             key = normalised.casefold()
             if key in seen:
                 return False
