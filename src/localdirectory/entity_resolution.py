@@ -99,16 +99,13 @@ def likely_same_entity(a: ListingRecord, b: ListingRecord) -> bool:
 
     # Service providers without a public premises can be reconciled when both the
     # business identity and explicitly declared service area agree.
-    if (
+    return (
         a.listing_type == "service_provider"
         and b.listing_type == "service_provider"
         and strong_org_signal
         and _shared_service_area(a, b)
         and ratio >= 0.88
-    ):
-        return True
-
-    return False
+    )
 
 
 def _merge_into(target: ListingRecord, incoming: ListingRecord) -> None:
