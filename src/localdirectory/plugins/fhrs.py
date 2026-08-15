@@ -86,6 +86,8 @@ def _directory_category(item: dict) -> str:
         return "food_producers"
     if "caring premises" in business_type:
         return "health_care"
+    if "retailers" in business_type:
+        return "shops"
     if "cater" in business_type:
         return "food_and_drink"
     return category_from_terms(name, business_type)
