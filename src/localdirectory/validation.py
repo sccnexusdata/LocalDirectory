@@ -43,13 +43,28 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
         official = "A" in source_classes
         owned = "B" in source_classes
 
+        if independent_sources == 1:
+            flags.add("single_source_only")
+            if source_classes == {"D"}:
+                flags.add("needs_independent_corroboration")
+        elif independent_sources < min_sources:
+            flags.add("needs_independent_corroboration")
+
         core_ok = bool(record.name and record.primary_category != "other" and (record.postcode or is_local_place or service_match))
         if record.listing_type == "registered_company" and independent_sources == 1:
             core_ok = False
             flags.add("registered_company_requires_trading_corroboration")
 
+        blocking_conflict = any(
+            flag.startswith(("field_conflict:", "entity_resolution_conflict:"))
+            for flag in flags
+        )
+        if blocking_conflict:
+            flags.add("identity_or_field_conflict")
+
         publish = bool(
             core_ok
+            and not blocking_conflict
             and (
                 record.manual_verified
                 or (allow_class_a_single and official and record.listing_type != "registered_company")
@@ -77,6 +92,8 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
             score += 0.04
         if record.postcode:
             score += 0.05
+        if blocking_conflict:
+            score = min(score, 0.49)
         record.confidence_score = round(min(score, 0.99), 2)
         record.publish_safe = publish
         record.review_required = not publish
