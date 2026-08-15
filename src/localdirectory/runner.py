@@ -13,6 +13,7 @@ from localdirectory.exporters import export_leweslive, export_public, write_csv,
 from localdirectory.models import ListingRecord, utc_now_iso
 from localdirectory.plugins import CompaniesHousePlugin, FHRSPlugin, JSONLDPlugin, ManualCSVPlugin, OSMOverpassPlugin
 from localdirectory.plugins.base import HarvestResult
+from localdirectory.postcode_enrichment import enrich_missing_coordinates
 from localdirectory.validation import validate_records
 
 
@@ -49,6 +50,22 @@ class DirectoryRunner:
             all_records.extend(result.records)
 
         merged = merge_records(all_records)
+
+        if not self.offline and bool(self.config.source_config.get("postcode_enrichment", True)):
+            postcode_stats = enrich_missing_coordinates(
+                merged,
+                timeout=int(self.config.source_config.get("postcode_timeout_seconds", min(self.timeout, 20))),
+                user_agent=self.user_agent,
+            )
+            results.append(
+                HarvestResult(
+                    "postcode_enrichment",
+                    ok=bool(postcode_stats["ok"]),
+                    message=str(postcode_stats["message"]),
+                    requests_made=int(postcode_stats["requests_made"]),
+                )
+            )
+
         summary = validate_records(merged, self.config.location, self.config.policy)
         merged.sort(key=lambda r: (r.primary_category, r.name.casefold()))
 
@@ -131,6 +148,8 @@ class DirectoryRunner:
         sources = self.config.source_config
         candidates = [*list(sources.get("websites", [])), *(record.website for record in records if record.website)]
         maximum = max(0, int(sources.get("json_ld_max_websites", 60)))
+        if maximum == 0:
+            return []
         seen: set[str] = set()
         urls: list[str] = []
         for candidate in candidates:
