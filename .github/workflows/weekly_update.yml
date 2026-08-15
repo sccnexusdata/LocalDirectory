@@ -22,6 +22,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: local-directory-harvest-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PYTHONUNBUFFERED: "1"
 
