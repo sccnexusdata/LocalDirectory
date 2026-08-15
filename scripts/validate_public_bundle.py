@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from pathlib import Path
 
 
-FORBIDDEN_KEYS = {"manual_verified"}
+FORBIDDEN_KEYS = {"manual_verified", "field_provenance"}
+BLOCKING_FLAG_PREFIXES = ("field_conflict:", "entity_resolution_conflict:")
 
 
 def validate(bundle: Path) -> list[str]:
@@ -20,6 +22,10 @@ def validate(bundle: Path) -> list[str]:
         if not isinstance(records, list):
             errors.append("directory.v1.json must be a list")
         else:
+            ids = [str(record.get("listing_id") or "") for record in records]
+            duplicate_ids = sorted(key for key, count in Counter(ids).items() if key and count > 1)
+            if duplicate_ids:
+                errors.append(f"duplicate listing_id values: {duplicate_ids[:10]}")
             for index, record in enumerate(records):
                 forbidden = FORBIDDEN_KEYS.intersection(record)
                 if forbidden:
@@ -28,6 +34,11 @@ def validate(bundle: Path) -> list[str]:
                     errors.append(f"record {index} is not publish_safe")
                 if not record.get("listing_id") or not record.get("name"):
                     errors.append(f"record {index} missing stable identity/name")
+                flags = [str(flag) for flag in record.get("quality_flags", [])]
+                if any(flag.startswith(BLOCKING_FLAG_PREFIXES) for flag in flags):
+                    errors.append(f"record {index} exposes unresolved identity/field conflict")
+                if "identity_or_field_conflict" in flags:
+                    errors.append(f"record {index} exposes identity_or_field_conflict")
                 if not record.get("address_public", True):
                     for key in ("address", "postcode"):
                         if record.get(key):
