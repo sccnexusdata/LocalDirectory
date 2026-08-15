@@ -4,8 +4,10 @@ import json
 import os
 from dataclasses import asdict
 from pathlib import Path
+from urllib.parse import urlparse
 
 from localdirectory.config import DirectoryConfig
+from localdirectory.coverage import build_coverage_report
 from localdirectory.entity_resolution import merge_records
 from localdirectory.exporters import export_leweslive, export_public, write_csv, write_geojson, write_json
 from localdirectory.models import ListingRecord, utc_now_iso
@@ -31,14 +33,18 @@ class DirectoryRunner:
         results: list[HarvestResult] = []
         all_records: list[ListingRecord] = []
         for plugin in self._plugins():
-            try:
-                result = plugin.harvest()
-            except Exception as exc:
-                result = HarvestResult(
-                    getattr(plugin, "name", plugin.__class__.__name__),
-                    ok=False,
-                    message=f"{exc.__class__.__name__}: {exc}",
-                )
+            result = self._harvest(plugin)
+            results.append(result)
+            all_records.extend(result.records)
+
+        if not self.offline and self._source_enabled("json_ld"):
+            json_ld_urls = self._json_ld_urls(all_records)
+            json_ld_timeout = int(self.config.source_config.get("json_ld_timeout_seconds", min(self.timeout, 15)))
+            result = self._harvest(JSONLDPlugin(json_ld_urls, json_ld_timeout, self.user_agent))
+            if json_ld_urls:
+                result.message = f"Queued {len(json_ld_urls)} discovered/configured websites. {result.message}"
+            else:
+                result.message = "No eligible discovered/configured websites were available for JSON-LD enrichment"
             results.append(result)
             all_records.extend(result.records)
 
@@ -46,11 +52,16 @@ class DirectoryRunner:
         summary = validate_records(merged, self.config.location, self.config.policy)
         merged.sort(key=lambda r: (r.primary_category, r.name.casefold()))
 
+        coverage = build_coverage_report(merged, dict(self.config.policy.get("coverage", {})))
+
         write_json(merged, output_dir / "listings.json")
         write_csv(merged, output_dir / "listings.csv")
         write_geojson(merged, output_dir / "listings.geojson")
         export_public(merged, output_dir, self.config.project_name)
         export_leweslive(merged, output_dir)
+        (output_dir / "coverage-report.json").write_text(
+            json.dumps({"generated_at": utc_now_iso(), **coverage}, indent=2), encoding="utf-8"
+        )
 
         source_health = {
             "generated_at": utc_now_iso(),
@@ -97,9 +108,45 @@ class DirectoryRunner:
             "source_record_counts": {r.source_name: len(r.records) for r in results},
             "source_failures": [r.source_name for r in results if not r.ok],
             "quality_flags": _flag_counts(merged),
+            "coverage": coverage,
         }
         (output_dir / "quality-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         return output_dir
+
+    def _harvest(self, plugin) -> HarvestResult:
+        try:
+            return plugin.harvest()
+        except Exception as exc:
+            return HarvestResult(
+                getattr(plugin, "name", plugin.__class__.__name__),
+                ok=False,
+                message=f"{exc.__class__.__name__}: {exc}",
+            )
+
+    def _source_enabled(self, source_name: str) -> bool:
+        enabled = set(self.config.source_config.get("enabled", ["fhrs", "osm_overpass", "companies_house", "json_ld"]))
+        return source_name in enabled
+
+    def _json_ld_urls(self, records: list[ListingRecord]) -> list[str]:
+        sources = self.config.source_config
+        candidates = [*list(sources.get("websites", [])), *(record.website for record in records if record.website)]
+        maximum = max(0, int(sources.get("json_ld_max_websites", 60)))
+        seen: set[str] = set()
+        urls: list[str] = []
+        for candidate in candidates:
+            value = str(candidate or "").strip()
+            parsed = urlparse(value)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                continue
+            normalised = value.rstrip("/")
+            key = normalised.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            urls.append(normalised)
+            if len(urls) >= maximum:
+                break
+        return urls
 
     def _plugins(self):
         location = self.config.location
@@ -141,8 +188,6 @@ class DirectoryRunner:
                     max_results=int(sources.get("companies_house_max_results", 500)),
                 )
             )
-        if "json_ld" in enabled:
-            plugins.append(JSONLDPlugin(list(sources.get("websites", [])), self.timeout, self.user_agent))
         return plugins
 
 
