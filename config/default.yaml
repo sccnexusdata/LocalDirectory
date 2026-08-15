@@ -1,0 +1,34 @@
+project:
+  name: LocalDirectory
+  slug: localdirectory
+
+location:
+  name: Lewes
+  country: GB
+  postcode: BN7 2NB
+  latitude: 50.8739
+  longitude: 0.0088
+  radius_miles: 10
+  radius_km: 16.0934
+
+outputs:
+  directory: exports
+
+policy:
+  minimum_independent_sources: 2
+  allow_class_a_single_source: true
+  publish_registered_office_addresses: false
+  disclaimer: >-
+    Listings are local signposts, not recommendations. Check current trading status,
+    insurance, qualifications, memberships, regulated status and written quotes directly.
+
+sources:
+  enabled:
+    - fhrs
+    - osm_overpass
+    - companies_house
+    - json_ld
+  manual_csv: data/manual/listings.csv
+  websites: []
+  overpass_endpoint: https://overpass-api.de/api/interpreter
+  companies_house_max_results: 500

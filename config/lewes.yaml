@@ -1,0 +1,36 @@
+project:
+  name: LewesLive Local Directory
+  slug: lewes
+
+location:
+  name: Lewes
+  country: GB
+  postcode: BN7 2NB
+  postcode_area: BN7
+  latitude: 50.8739
+  longitude: 0.0088
+  radius_miles: 10
+  radius_km: 16.0934
+
+outputs:
+  directory: exports
+
+policy:
+  minimum_independent_sources: 2
+  allow_class_a_single_source: true
+  publish_registered_office_addresses: false
+  disclaimer: >-
+    LewesLive is a local signposting directory. Listings are not recommendations.
+    Check current trading status, insurance, qualifications, memberships, regulated
+    status, reviews and written quotes directly before hiring or travelling.
+
+sources:
+  enabled:
+    - fhrs
+    - osm_overpass
+    - companies_house
+    - json_ld
+  manual_csv: data/manual/listings.csv
+  websites: []
+  overpass_endpoint: https://overpass-api.de/api/interpreter
+  companies_house_max_results: 500

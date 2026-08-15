@@ -1,0 +1,97 @@
+name: Weekly Local Directory Harvest
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: "Configuration path"
+        required: false
+        default: "config/lewes.yaml"
+  schedule:
+    - cron: "35 6 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Tests
+        run: pytest -q
+      - name: Run harvest
+        env:
+          COMPANIES_HOUSE_API_KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY }}
+          LOCALDIRECTORY_USER_AGENT: "LocalDirectory/0.1 (+https://github.com/sccnexusdata/LocalDirectory)"
+        run: python run.py run --config "${{ inputs.config_path || 'config/lewes.yaml' }}"
+      - name: Locate generated output
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+          QUALITY="$(find exports -name quality-report.json -print | head -n 1)"
+          if [ -z "$QUALITY" ]; then
+            echo "No quality-report.json generated"
+            find exports -maxdepth 3 -type f -print || true
+            exit 1
+          fi
+          ROOT="$(dirname "$QUALITY")"
+          echo "root=$ROOT" >> "$GITHUB_OUTPUT"
+          echo "Output root: $ROOT"
+      - name: Validate public deployment gate
+        run: python scripts/validate_public_bundle.py "${{ steps.locate.outputs.root }}/public"
+      - name: Build health report
+        run: python scripts/project_health.py --exports-dir "${{ steps.locate.outputs.root }}" --output "${{ steps.locate.outputs.root }}/project-health.json"
+      - name: Prepare segregated review bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${{ steps.locate.outputs.root }}"
+          mkdir -p "$ROOT/public-build" "$ROOT/leweslive-import" "$ROOT/test-review" "$ROOT/internal-audit"
+
+          cp -r "$ROOT/public/." "$ROOT/public-build/"
+          cp -r "$ROOT/leweslive/." "$ROOT/leweslive-import/"
+
+          cp "$ROOT/quality-report.json" "$ROOT/test-review/"
+          cp "$ROOT/source-health.json" "$ROOT/test-review/"
+          cp "$ROOT/review-queue.json" "$ROOT/test-review/"
+
+          cp "$ROOT/listings.json" "$ROOT/internal-audit/"
+          cp "$ROOT/listings.csv" "$ROOT/internal-audit/"
+          cp "$ROOT/listings.geojson" "$ROOT/internal-audit/"
+          cp "$ROOT/quality-report.json" "$ROOT/internal-audit/"
+          cp "$ROOT/source-health.json" "$ROOT/internal-audit/"
+          cp "$ROOT/source-provenance.json" "$ROOT/internal-audit/"
+          cp "$ROOT/review-queue.json" "$ROOT/internal-audit/"
+          cp "$ROOT/project-health.json" "$ROOT/internal-audit/"
+      - name: Upload public build
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-directory-public-build
+          path: ${{ steps.locate.outputs.root }}/public-build/
+      - name: Upload LewesLive import
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-directory-leweslive-import
+          path: ${{ steps.locate.outputs.root }}/leweslive-import/
+      - name: Upload test review
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-directory-test-review
+          path: ${{ steps.locate.outputs.root }}/test-review/
+      - name: Upload internal audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-directory-internal-audit
+          path: ${{ steps.locate.outputs.root }}/internal-audit/

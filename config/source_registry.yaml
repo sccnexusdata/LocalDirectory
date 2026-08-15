@@ -1,0 +1,41 @@
+sources:
+  - name: Food Standards Agency FHRS
+    class: A
+    purpose: food establishment discovery and corroboration
+    url: https://api.ratings.food.gov.uk/help
+    adapter: fhrs
+  - name: Companies House
+    class: A
+    purpose: corporate identity and active-company candidate discovery
+    url: https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference
+    adapter: companies_house
+  - name: OpenStreetMap
+    class: D
+    purpose: broad place and service discovery with geospatial data
+    url: https://wiki.openstreetmap.org/wiki/Overpass_API
+    adapter: osm_overpass
+  - name: Lewes Chamber of Commerce members directory
+    class: C
+    purpose: local business discovery and corroboration; recipe adapter planned
+    url: https://www.leweschamber.co.uk/members-directory/
+    adapter: planned_directory_recipe
+  - name: Visit Lewes shopping and food directories
+    class: C
+    purpose: visitor-facing place discovery and corroboration; recipe adapter planned
+    url: https://www.visitlewes.co.uk/things-to-do/shopping
+    adapter: planned_directory_recipe
+  - name: Lewes.co.uk business directory
+    class: E
+    purpose: broad legacy candidate discovery only; freshness must be checked independently
+    url: https://lewes.co.uk/business/
+    adapter: planned_directory_recipe
+  - name: CQC
+    class: A
+    purpose: regulated health and care provider verification
+    url: https://www.cqc.org.uk/about-us/transparency/using-cqc-data
+    adapter: planned_cqc
+  - name: Charity Commission
+    class: A
+    purpose: registered charity identity and verification
+    url: https://register-of-charities.charitycommission.gov.uk/en/documentation-on-the-api
+    adapter: planned_charity_commission
