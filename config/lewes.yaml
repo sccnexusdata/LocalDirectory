@@ -19,6 +19,14 @@ policy:
   minimum_independent_sources: 2
   allow_class_a_single_source: true
   publish_registered_office_addresses: false
+  coverage:
+    minimum_publish_safe: 300
+    minimum_priority_categories_with_3_records: 14
+    minimum_trade_categories_with_2_records: 7
+    minimum_website_coverage: 0.25
+    minimum_contact_coverage: 0.40
+    minimum_geocoded_coverage: 0.65
+    minimum_multi_source_coverage: 0.20
   disclaimer: >-
     LewesLive is a local signposting directory. Listings are not recommendations.
     Check current trading status, insurance, qualifications, memberships, regulated
@@ -32,5 +40,7 @@ sources:
     - json_ld
   manual_csv: data/manual/listings.csv
   websites: []
+  json_ld_max_websites: 60
+  json_ld_timeout_seconds: 12
   overpass_endpoint: https://overpass-api.de/api/interpreter
   companies_house_max_results: 500
