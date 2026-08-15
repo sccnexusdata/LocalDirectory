@@ -68,21 +68,31 @@ jobs:
         run: |
           set -euo pipefail
           ROOT="${{ steps.locate.outputs.root }}"
-          python - "$ROOT/source-health.json" "$GITHUB_OUTPUT" <<'PY'
+          python - "$ROOT/source-health.json" "$ROOT/coverage-report.json" "$GITHUB_OUTPUT" <<'PY'
           import json, sys
-          health_path, output_path = sys.argv[1:]
+          health_path, coverage_path, output_path = sys.argv[1:]
           health = json.load(open(health_path, encoding="utf-8"))
+          coverage = json.load(open(coverage_path, encoding="utf-8"))
           by_source = {item.get("source"): item for item in health.get("sources", [])}
           critical = ("fhrs", "osm_overpass")
           failed = [name for name in critical if not by_source.get(name, {}).get("ok")]
-          promote = not failed
+          failed_coverage = [name for name, passed in coverage.get("checks", {}).items() if not passed]
+          coverage_ready = bool(coverage.get("ready"))
+          promote = not failed and coverage_ready
           with open(output_path, "a", encoding="utf-8") as handle:
               handle.write(f"promote={'true' if promote else 'false'}\n")
               handle.write(f"failed_critical={','.join(failed)}\n")
+              handle.write(f"coverage_ready={'true' if coverage_ready else 'false'}\n")
+              handle.write(f"failed_coverage={','.join(failed_coverage)}\n")
           if promote:
-              print("Critical source gate passed; governed feed may be promoted")
+              print("Critical-source and directory-coverage gates passed; governed feed may be promoted")
           else:
-              print("Critical source gate degraded; preserving previously promoted feed. Failed:", ", ".join(failed))
+              print("Governed feed held back.")
+              if failed:
+                  print("Failed critical sources:", ", ".join(failed))
+              if failed_coverage:
+                  print("Failed coverage checks:", ", ".join(failed_coverage))
+              print(json.dumps(coverage.get("metrics", {}), indent=2))
           PY
       - name: Prepare segregated review bundles
         shell: bash
@@ -95,6 +105,7 @@ jobs:
           cp -r "$ROOT/leweslive/." "$ROOT/leweslive-import/"
 
           cp "$ROOT/quality-report.json" "$ROOT/test-review/"
+          cp "$ROOT/coverage-report.json" "$ROOT/test-review/"
           cp "$ROOT/source-health.json" "$ROOT/test-review/"
           cp "$ROOT/review-queue.json" "$ROOT/test-review/"
 
@@ -102,6 +113,7 @@ jobs:
           cp "$ROOT/listings.csv" "$ROOT/internal-audit/"
           cp "$ROOT/listings.geojson" "$ROOT/internal-audit/"
           cp "$ROOT/quality-report.json" "$ROOT/internal-audit/"
+          cp "$ROOT/coverage-report.json" "$ROOT/internal-audit/"
           cp "$ROOT/source-health.json" "$ROOT/internal-audit/"
           cp "$ROOT/source-provenance.json" "$ROOT/internal-audit/"
           cp "$ROOT/review-queue.json" "$ROOT/internal-audit/"
@@ -116,9 +128,13 @@ jobs:
           cp "$ROOT/leweslive/directory.v1.json" published/leweslive/directory.v1.json
           cp "$ROOT/leweslive/directory.v1.js" published/leweslive/directory.v1.js
           cp "$ROOT/leweslive/manifest.v1.json" published/leweslive/manifest.v1.json
-      - name: Preserve prior governed feed on degraded run
+      - name: Preserve prior governed feed when release gates fail
         if: steps.promote.outputs.promote != 'true'
-        run: echo "Not promoting degraded harvest; failed critical sources=${{ steps.promote.outputs.failed_critical }}"
+        run: |
+          echo "Not promoting this harvest."
+          echo "Failed critical sources=${{ steps.promote.outputs.failed_critical }}"
+          echo "Coverage ready=${{ steps.promote.outputs.coverage_ready }}"
+          echo "Failed coverage checks=${{ steps.promote.outputs.failed_coverage }}"
       - name: Commit latest governed feed
         if: steps.promote.outputs.promote == 'true'
         shell: bash
