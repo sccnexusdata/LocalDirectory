@@ -14,6 +14,9 @@ location:
 
 outputs:
   directory: exports
+  site_bundle:
+    slug: leweslive
+    js_global: LEWESLIVE_DIRECTORY
 
 policy:
   minimum_independent_sources: 2
