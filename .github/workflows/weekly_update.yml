@@ -28,6 +28,7 @@ concurrency:
 
 env:
   PYTHONUNBUFFERED: "1"
+  CONFIG_PATH: ${{ inputs.config_path || 'config/lewes.yaml' }}
 
 jobs:
   harvest:
@@ -43,11 +44,32 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Tests
         run: pytest -q
+      - name: Resolve configured presentation-site bundle
+        id: bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - "$CONFIG_PATH" "$GITHUB_OUTPUT" <<'PY'
+          import re, sys, yaml
+          config_path, output_path = sys.argv[1:]
+          config = yaml.safe_load(open(config_path, encoding="utf-8")) or {}
+          bundle = (config.get("outputs") or {}).get("site_bundle") or {}
+          slug = str(bundle.get("slug") or "").strip().lower()
+          js_global = str(bundle.get("js_global") or "").strip()
+          if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", slug):
+              raise SystemExit(f"Configured outputs.site_bundle.slug is missing or unsafe: {slug!r}")
+          if not re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", js_global):
+              raise SystemExit(f"Configured outputs.site_bundle.js_global is missing or unsafe: {js_global!r}")
+          with open(output_path, "a", encoding="utf-8") as handle:
+              handle.write(f"slug={slug}\n")
+              handle.write(f"js_global={js_global}\n")
+          print(f"Publishing configured site bundle: {slug} / window.{js_global}")
+          PY
       - name: Run harvest
         env:
           COMPANIES_HOUSE_API_KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY }}
           LOCALDIRECTORY_USER_AGENT: "LocalDirectory/0.1 (+https://github.com/sccnexusdata/LocalDirectory)"
-        run: python run.py run --config "${{ inputs.config_path || 'config/lewes.yaml' }}"
+        run: python run.py run --config "$CONFIG_PATH"
       - name: Locate generated output
         id: locate
         shell: bash
@@ -66,6 +88,31 @@ jobs:
         run: python scripts/validate_public_bundle.py "${{ steps.locate.outputs.root }}/public"
       - name: Build health report
         run: python scripts/project_health.py --exports-dir "${{ steps.locate.outputs.root }}" --output "${{ steps.locate.outputs.root }}/project-health.json"
+      - name: Validate configured site bundle contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${{ steps.locate.outputs.root }}"
+          SITE_SLUG="${{ steps.bundle.outputs.slug }}"
+          JS_GLOBAL="${{ steps.bundle.outputs.js_global }}"
+          python - "$ROOT/$SITE_SLUG" "$SITE_SLUG" "$JS_GLOBAL" <<'PY'
+          import json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          site_slug, js_global = sys.argv[2:]
+          payload = json.loads((root / "directory.v1.json").read_text(encoding="utf-8"))
+          manifest = json.loads((root / "manifest.v1.json").read_text(encoding="utf-8"))
+          text = (root / "directory.v1.js").read_text(encoding="utf-8").strip()
+          prefix = f"window.{js_global} = "
+          assert payload.get("schemaVersion") == "1.0"
+          assert payload.get("site") == site_slug
+          assert isinstance(payload.get("listings"), list)
+          assert manifest.get("site") == site_slug
+          assert manifest.get("js_global") == js_global
+          assert int(manifest.get("record_count", -1)) == len(payload["listings"])
+          assert text.startswith(prefix) and text.endswith(";")
+          assert json.loads(text[len(prefix):-1]) == payload
+          print(f"Validated {site_slug} browser bundle with {len(payload['listings'])} records")
+          PY
       - name: Evaluate feed promotion eligibility
         id: promote
         shell: bash
@@ -103,10 +150,11 @@ jobs:
         run: |
           set -euo pipefail
           ROOT="${{ steps.locate.outputs.root }}"
-          mkdir -p "$ROOT/public-build" "$ROOT/leweslive-import" "$ROOT/test-review" "$ROOT/internal-audit"
+          SITE_SLUG="${{ steps.bundle.outputs.slug }}"
+          mkdir -p "$ROOT/public-build" "$ROOT/site-import" "$ROOT/test-review" "$ROOT/internal-audit"
 
           cp -r "$ROOT/public/." "$ROOT/public-build/"
-          cp -r "$ROOT/leweslive/." "$ROOT/leweslive-import/"
+          cp -r "$ROOT/$SITE_SLUG/." "$ROOT/site-import/"
 
           cp "$ROOT/quality-report.json" "$ROOT/test-review/"
           cp "$ROOT/coverage-report.json" "$ROOT/test-review/"
@@ -122,16 +170,17 @@ jobs:
           cp "$ROOT/source-provenance.json" "$ROOT/internal-audit/"
           cp "$ROOT/review-queue.json" "$ROOT/internal-audit/"
           cp "$ROOT/project-health.json" "$ROOT/internal-audit/"
-      - name: Stage latest governed LewesLive feed
+      - name: Stage latest governed site feed
         if: steps.promote.outputs.promote == 'true'
         shell: bash
         run: |
           set -euo pipefail
           ROOT="${{ steps.locate.outputs.root }}"
-          mkdir -p published/leweslive
-          cp "$ROOT/leweslive/directory.v1.json" published/leweslive/directory.v1.json
-          cp "$ROOT/leweslive/directory.v1.js" published/leweslive/directory.v1.js
-          cp "$ROOT/leweslive/manifest.v1.json" published/leweslive/manifest.v1.json
+          SITE_SLUG="${{ steps.bundle.outputs.slug }}"
+          mkdir -p "published/$SITE_SLUG"
+          cp "$ROOT/$SITE_SLUG/directory.v1.json" "published/$SITE_SLUG/directory.v1.json"
+          cp "$ROOT/$SITE_SLUG/directory.v1.js" "published/$SITE_SLUG/directory.v1.js"
+          cp "$ROOT/$SITE_SLUG/manifest.v1.json" "published/$SITE_SLUG/manifest.v1.json"
       - name: Preserve prior governed feed when release gates fail
         if: steps.promote.outputs.promote != 'true'
         run: |
@@ -144,25 +193,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "$(git status --porcelain -- published/leweslive)" ]; then
+          SITE_SLUG="${{ steps.bundle.outputs.slug }}"
+          if [ -z "$(git status --porcelain -- "published/$SITE_SLUG")" ]; then
             echo "Governed feed unchanged"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add published/leweslive
-          git commit -m "data: refresh governed LewesLive directory feed"
+          git add "published/$SITE_SLUG"
+          git commit -m "data: refresh governed $SITE_SLUG directory feed"
           git push
       - name: Upload public build
         uses: actions/upload-artifact@v4
         with:
           name: local-directory-public-build
           path: ${{ steps.locate.outputs.root }}/public-build/
-      - name: Upload LewesLive import
+      - name: Upload configured site import
         uses: actions/upload-artifact@v4
         with:
-          name: local-directory-leweslive-import
-          path: ${{ steps.locate.outputs.root }}/leweslive-import/
+          name: local-directory-${{ steps.bundle.outputs.slug }}-import
+          path: ${{ steps.locate.outputs.root }}/site-import/
       - name: Upload test review
         uses: actions/upload-artifact@v4
         with:

@@ -19,7 +19,10 @@ def test_offline_run_builds_segregated_outputs(tmp_path, monkeypatch):
         yaml.safe_dump({
             "project": {"name": "Test", "slug": "test"},
             "location": {"name": "Lewes", "latitude": 50.8739, "longitude": 0.0088, "radius_km": 10},
-            "outputs": {"directory": str(tmp_path / "exports")},
+            "outputs": {
+                "directory": str(tmp_path / "exports"),
+                "site_bundle": {"slug": "leweslive", "js_global": "LEWESLIVE_DIRECTORY"},
+            },
             "policy": {"minimum_independent_sources": 2, "allow_class_a_single_source": True},
             "sources": {"manual_csv": str(manual)},
         }),
@@ -28,10 +31,46 @@ def test_offline_run_builds_segregated_outputs(tmp_path, monkeypatch):
     output = DirectoryRunner(load_config(config_path), offline=True).run()
     public_records = json.loads((output / "public" / "directory.v1.json").read_text(encoding="utf-8"))
     coverage = json.loads((output / "coverage-report.json").read_text(encoding="utf-8"))
+    site_payload = json.loads((output / "leweslive" / "directory.v1.json").read_text(encoding="utf-8"))
     assert len(public_records) == 1
     assert coverage["metrics"]["publish_safe_records"] == 1
     assert coverage["ready"] is True
-    assert (output / "leweslive" / "directory.v1.js").exists()
+    assert site_payload["site"] == "leweslive"
+    assert (output / "leweslive" / "directory.v1.js").read_text(encoding="utf-8").startswith(
+        "window.LEWESLIVE_DIRECTORY = "
+    )
+
+
+def test_site_bundle_is_locality_configurable_without_lewes_leakage(tmp_path):
+    manual = tmp_path / "listings.csv"
+    manual.write_text(
+        "name,listing_type,primary_category,description,website,phone,email,address,postcode,latitude,longitude,service_area,company_number,address_public,phone_public,email_public,manual_verified,source_name,source_url\n"
+        "Brighton Test Cafe,place,food_and_drink,Test,,,,1 Test Street,BN1 1AA,50.8225,-0.1372,Brighton,,true,true,true,true,Manual,https://example.test\n",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "brighton.yaml"
+    config_path.write_text(
+        yaml.safe_dump({
+            "project": {"name": "BrightonLive Directory", "slug": "brighton"},
+            "location": {"name": "Brighton", "latitude": 50.8225, "longitude": -0.1372, "radius_km": 10},
+            "outputs": {
+                "directory": str(tmp_path / "exports"),
+                "site_bundle": {"slug": "brightonlive", "js_global": "BRIGHTONLIVE_DIRECTORY"},
+            },
+            "policy": {"minimum_independent_sources": 2, "allow_class_a_single_source": True},
+            "sources": {"manual_csv": str(manual)},
+        }),
+        encoding="utf-8",
+    )
+
+    output = DirectoryRunner(load_config(config_path), offline=True).run()
+    js = (output / "brightonlive" / "directory.v1.js").read_text(encoding="utf-8")
+    payload = json.loads((output / "brightonlive" / "directory.v1.json").read_text(encoding="utf-8"))
+
+    assert js.startswith("window.BRIGHTONLIVE_DIRECTORY = ")
+    assert payload["site"] == "brightonlive"
+    assert not (output / "leweslive").exists()
+    assert "LEWESLIVE_DIRECTORY" not in js
 
 
 def test_json_ld_queue_uses_discovered_websites_and_cap(tmp_path):

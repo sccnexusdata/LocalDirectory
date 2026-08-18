@@ -177,7 +177,7 @@ def _parse_member(html: str, source_url: str) -> ListingRecord | None:
 
     sector_text = _sector_text(soup)
     address = _address_text(soup)
-    postcode_match = re.search(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", address, flags=re.I)
+    postcode_match = re.search(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", address, flags=re.IGNORECASE)
     postcode = normalise_postcode(postcode_match.group(0)) if postcode_match else ""
     website = _external_website(soup, source_url)
     description = _description(soup, name)
@@ -225,7 +225,7 @@ def _sector_text(soup: BeautifulSoup) -> str:
         elements = soup.select(selector)
         text = " ".join(element.get_text(" ", strip=True) for element in elements)
         if text:
-            return re.sub(r"^\s*Sector\s*:\s*", "", text, flags=re.I)
+            return re.sub(r"^\s*Sector\s*:\s*", "", text, flags=re.IGNORECASE)
     lines = _lines(soup)
     for index, line in enumerate(lines):
         if line.casefold().rstrip(":") == "sector":
@@ -286,7 +286,7 @@ def _description(soup: BeautifulSoup, name: str) -> str:
             text = paragraph.get_text(" ", strip=True)
             if len(text) >= 40 and "unsolicited mass" not in text.casefold() and name.casefold() not in {"", text.casefold()}:
                 return text[:1200]
-    return f"Current member of Lewes Chamber of Commerce; sector information is published on the Chamber member page."
+    return "Current member of Lewes Chamber of Commerce; sector information is published on the Chamber member page."
 
 
 def _lines(soup: BeautifulSoup) -> list[str]:
