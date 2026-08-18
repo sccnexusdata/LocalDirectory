@@ -46,7 +46,7 @@ class DirectoryConfig:
         if not raw:
             return None
         if not isinstance(raw, dict):
-            raise ValueError("outputs.site_bundle must be a mapping")
+            raise TypeError("outputs.site_bundle must be a mapping")
         slug = str(raw.get("slug", "")).strip()
         js_global = str(raw.get("js_global", "")).strip()
         if not slug or not js_global:
