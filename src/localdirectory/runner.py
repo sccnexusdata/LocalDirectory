@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from localdirectory.config import DirectoryConfig
 from localdirectory.coverage import PRIORITY_CATEGORIES, TRADE_CATEGORIES, build_coverage_report
 from localdirectory.entity_resolution import merge_records
-from localdirectory.exporters import export_leweslive, export_public, write_csv, write_geojson, write_json
+from localdirectory.exporters import export_public, export_site_bundle, write_csv, write_geojson, write_json
 from localdirectory.models import ListingRecord, utc_now_iso
 from localdirectory.plugins import CompaniesHousePlugin, FHRSPlugin, JSONLDPlugin, ManualCSVPlugin, OSMOverpassPlugin
 from localdirectory.plugins.base import HarvestResult
@@ -84,7 +84,14 @@ class DirectoryRunner:
         write_csv(merged, output_dir / "listings.csv")
         write_geojson(merged, output_dir / "listings.geojson")
         export_public(merged, output_dir, self.config.project_name)
-        export_leweslive(merged, output_dir)
+        site_bundle = self.config.site_bundle
+        if site_bundle:
+            export_site_bundle(
+                merged,
+                output_dir,
+                site_slug=site_bundle["slug"],
+                js_global=site_bundle["js_global"],
+            )
         (output_dir / "coverage-report.json").write_text(
             json.dumps({"generated_at": utc_now_iso(), **coverage}, indent=2), encoding="utf-8"
         )
