@@ -2,12 +2,15 @@ project:
   name: LocalDirectory
   slug: localdirectory
 
+# Generic template only. Copy this file to config/<locality>.yaml and provide
+# real coordinates before running a harvest. Presentation-site exports are
+# opt-in through outputs.site_bundle so the engine has no built-in town brand.
 location:
-  name: Lewes
+  name: Local Area
   country: GB
-  postcode: BN7 2NB
-  latitude: 50.8739
-  longitude: 0.0088
+  postcode: ""
+  latitude: null
+  longitude: null
   radius_miles: 10
   radius_km: 16.0934
 
