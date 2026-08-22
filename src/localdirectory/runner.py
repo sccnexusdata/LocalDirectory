@@ -14,6 +14,7 @@ from localdirectory.exporters import export_public, export_site_bundle, write_cs
 from localdirectory.models import ListingRecord, utc_now_iso
 from localdirectory.plugins import (
     CompaniesHousePlugin,
+    CQCPlugin,
     FHRSPlugin,
     JSONLDPlugin,
     LewesChamberPlugin,
@@ -251,6 +252,7 @@ class DirectoryRunner:
             return plugins
 
         enabled = set(sources.get("enabled", ["fhrs", "osm_overpass", "companies_house", "json_ld"]))
+        radius_km = float(location.get("radius_km") or float(location.get("radius_miles", 10)) * 1.609344)
         if "fhrs" in enabled:
             plugins.append(
                 FHRSPlugin(
@@ -261,12 +263,25 @@ class DirectoryRunner:
                     self.user_agent,
                 )
             )
+        if "cqc" in enabled:
+            plugins.append(
+                CQCPlugin(
+                    float(location["latitude"]),
+                    float(location["longitude"]),
+                    radius_km,
+                    postcode_area=str(location.get("postcode_area", "")),
+                    index_url=str(sources.get("cqc_index_url", "https://www.cqc.org.uk/about-us/transparency/using-cqc-data")),
+                    csv_url=str(sources.get("cqc_csv_url", "")),
+                    timeout=int(sources.get("cqc_timeout_seconds", max(self.timeout, 45))),
+                    user_agent=self.user_agent,
+                )
+            )
         if "osm_overpass" in enabled:
             plugins.append(
                 OSMOverpassPlugin(
                     float(location["latitude"]),
                     float(location["longitude"]),
-                    float(location.get("radius_km") or float(location.get("radius_miles", 10)) * 1.609344),
+                    radius_km,
                     endpoint=str(sources.get("overpass_endpoint", "https://overpass-api.de/api/interpreter")),
                     timeout=max(self.timeout, 45),
                     user_agent=self.user_agent,
