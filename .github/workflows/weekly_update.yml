@@ -188,20 +188,66 @@ jobs:
           echo "Failed critical sources=${{ steps.promote.outputs.failed_critical }}"
           echo "Coverage ready=${{ steps.promote.outputs.coverage_ready }}"
           echo "Failed coverage checks=${{ steps.promote.outputs.failed_coverage }}"
-      - name: Commit latest governed feed
-        if: steps.promote.outputs.promote == 'true'
+      - name: Stage bounded harvest status
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${{ steps.locate.outputs.root }}"
+          SITE_SLUG="${{ steps.bundle.outputs.slug }}"
+          STATUS_PATH="published/$SITE_SLUG/harvest-status.json"
+          mkdir -p "published/$SITE_SLUG"
+          python - \
+            "$ROOT/source-health.json" \
+            "$ROOT/coverage-report.json" \
+            "$STATUS_PATH" \
+            "${{ steps.promote.outputs.promote }}" \
+            "${{ steps.promote.outputs.failed_critical }}" \
+            "${{ steps.promote.outputs.failed_coverage }}" <<'PY'
+          import json, pathlib, sys
+          health_path, coverage_path, output_path, promote_value, failed_critical, failed_coverage = sys.argv[1:]
+          health = json.load(open(health_path, encoding="utf-8"))
+          coverage = json.load(open(coverage_path, encoding="utf-8"))
+          promoted = promote_value.casefold() == "true"
+          source_summary = [
+              {
+                  "source": str(item.get("source") or ""),
+                  "ok": bool(item.get("ok")),
+                  "records": int(item.get("records") or 0),
+              }
+              for item in health.get("sources", [])
+          ]
+          status = {
+              "schema_version": "1.0",
+              "generated_at": coverage.get("generated_at") or health.get("generated_at"),
+              "site": pathlib.Path(output_path).parent.name,
+              "feed_promoted": promoted,
+              "preserved_previous_feed": not promoted,
+              "coverage_ready": bool(coverage.get("ready")),
+              "failed_critical_sources": [value for value in failed_critical.split(",") if value],
+              "failed_coverage_checks": [value for value in failed_coverage.split(",") if value],
+              "source_summary": source_summary,
+              "metrics": coverage.get("metrics", {}),
+          }
+          pathlib.Path(output_path).write_text(json.dumps(status, indent=2), encoding="utf-8")
+          print(json.dumps(status, indent=2))
+          PY
+      - name: Commit harvest status and governed feed
         shell: bash
         run: |
           set -euo pipefail
           SITE_SLUG="${{ steps.bundle.outputs.slug }}"
           if [ -z "$(git status --porcelain -- "published/$SITE_SLUG")" ]; then
-            echo "Governed feed unchanged"
+            echo "Published directory state unchanged"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "published/$SITE_SLUG"
-          git commit -m "data: refresh governed $SITE_SLUG directory feed"
+          if [ "${{ steps.promote.outputs.promote }}" = "true" ]; then
+            git commit -m "data: refresh governed $SITE_SLUG directory feed"
+          else
+            git commit -m "ops: record held $SITE_SLUG directory harvest"
+          fi
           git push
       - name: Upload public build
         uses: actions/upload-artifact@v4
