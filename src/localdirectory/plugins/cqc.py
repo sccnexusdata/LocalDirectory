@@ -192,7 +192,6 @@ def _record_from_row(
     address = _address(row)
     website = _field(row, "Location Web Address", "Location Website", "Website")
     phone = _field(row, "Location Telephone Number", "Telephone", "Phone")
-    provider = _field(row, "Provider Name")
     provider_company = re.sub(r"\s+", "", _field(row, "Provider Companies House Number"))
     provider_charity = re.sub(r"\s+", "", _field(row, "Provider Charity Number"))
     source_url = f"https://www.cqc.org.uk/location/{location_id}"
