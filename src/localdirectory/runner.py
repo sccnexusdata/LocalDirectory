@@ -12,7 +12,14 @@ from localdirectory.coverage import PRIORITY_CATEGORIES, TRADE_CATEGORIES, build
 from localdirectory.entity_resolution import merge_records
 from localdirectory.exporters import export_public, export_site_bundle, write_csv, write_geojson, write_json
 from localdirectory.models import ListingRecord, utc_now_iso
-from localdirectory.plugins import CompaniesHousePlugin, FHRSPlugin, JSONLDPlugin, ManualCSVPlugin, OSMOverpassPlugin
+from localdirectory.plugins import (
+    CompaniesHousePlugin,
+    FHRSPlugin,
+    JSONLDPlugin,
+    LewesChamberPlugin,
+    ManualCSVPlugin,
+    OSMOverpassPlugin,
+)
 from localdirectory.plugins.base import HarvestResult
 from localdirectory.postcode_enrichment import enrich_missing_coordinates
 from localdirectory.validation import validate_records
@@ -263,6 +270,16 @@ class DirectoryRunner:
                     endpoint=str(sources.get("overpass_endpoint", "https://overpass-api.de/api/interpreter")),
                     timeout=max(self.timeout, 45),
                     user_agent=self.user_agent,
+                )
+            )
+        if "lewes_chamber" in enabled:
+            plugins.append(
+                LewesChamberPlugin(
+                    index_url=str(sources.get("lewes_chamber_index_url", "https://www.leweschamber.co.uk/members-directory/")),
+                    timeout=int(sources.get("lewes_chamber_timeout_seconds", min(self.timeout, 20))),
+                    user_agent=self.user_agent,
+                    max_results=int(sources.get("lewes_chamber_max_results", 200)),
+                    max_workers=int(sources.get("lewes_chamber_workers", 4)),
                 )
             )
         if "companies_house" in enabled:
