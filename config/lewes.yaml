@@ -39,6 +39,7 @@ sources:
   enabled:
     - fhrs
     - cqc
+    - charity_commission
     - osm_overpass
     - lewes_chamber
     - companies_house
@@ -54,6 +55,25 @@ sources:
   cqc_index_url: https://www.cqc.org.uk/about-us/transparency/using-cqc-data
   cqc_csv_url: ""
   cqc_timeout_seconds: 60
+  charity_commission_index_url: https://register-of-charities.charitycommission.gov.uk/en/register/full-register-download
+  charity_commission_zip_url: ""
+  charity_commission_postcode_endpoint: https://api.postcodes.io/postcodes
+  charity_commission_timeout_seconds: 90
+  charity_commission_candidate_postcode_prefixes:
+    - BN1
+    - BN2
+    - BN6
+    - BN7
+    - BN8
+    - BN9
+    - BN10
+    - BN25
+    - BN26
+    - BN27
+    - TN22
+    - RH15
+    - RH16
+    - RH17
   overpass_endpoint: https://overpass-api.de/api/interpreter
   lewes_chamber_index_url: https://www.leweschamber.co.uk/members-directory/
   lewes_chamber_max_results: 200
