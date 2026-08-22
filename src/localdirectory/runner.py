@@ -13,8 +13,9 @@ from localdirectory.entity_resolution import merge_records
 from localdirectory.exporters import export_public, export_site_bundle, write_csv, write_geojson, write_json
 from localdirectory.models import ListingRecord, utc_now_iso
 from localdirectory.plugins import (
-    CompaniesHousePlugin,
     CQCPlugin,
+    CharityCommissionPlugin,
+    CompaniesHousePlugin,
     FHRSPlugin,
     JSONLDPlugin,
     LewesChamberPlugin,
@@ -273,6 +274,33 @@ class DirectoryRunner:
                     index_url=str(sources.get("cqc_index_url", "https://www.cqc.org.uk/about-us/transparency/using-cqc-data")),
                     csv_url=str(sources.get("cqc_csv_url", "")),
                     timeout=int(sources.get("cqc_timeout_seconds", max(self.timeout, 45))),
+                    user_agent=self.user_agent,
+                )
+            )
+        if "charity_commission" in enabled:
+            plugins.append(
+                CharityCommissionPlugin(
+                    float(location["latitude"]),
+                    float(location["longitude"]),
+                    radius_km,
+                    candidate_postcode_prefixes=[
+                        str(value)
+                        for value in sources.get(
+                            "charity_commission_candidate_postcode_prefixes",
+                            [str(location.get("postcode_area", ""))],
+                        )
+                    ],
+                    index_url=str(
+                        sources.get(
+                            "charity_commission_index_url",
+                            "https://register-of-charities.charitycommission.gov.uk/en/register/full-register-download",
+                        )
+                    ),
+                    zip_url=str(sources.get("charity_commission_zip_url", "")),
+                    postcode_endpoint=str(
+                        sources.get("charity_commission_postcode_endpoint", "https://api.postcodes.io/postcodes")
+                    ),
+                    timeout=int(sources.get("charity_commission_timeout_seconds", max(self.timeout, 45))),
                     user_agent=self.user_agent,
                 )
             )
