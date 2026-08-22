@@ -39,15 +39,20 @@ sources:
   enabled:
     - fhrs
     - osm_overpass
+    - lewes_chamber
     - companies_house
     - json_ld
   manual_csv: data/manual/listings.csv
   websites: []
-  json_ld_max_websites: 120
-  json_ld_trade_per_category: 10
+  json_ld_max_websites: 160
+  json_ld_trade_per_category: 12
   json_ld_workers: 6
   json_ld_timeout_seconds: 12
   postcode_enrichment: true
   postcode_timeout_seconds: 20
   overpass_endpoint: https://overpass-api.de/api/interpreter
+  lewes_chamber_index_url: https://www.leweschamber.co.uk/members-directory/
+  lewes_chamber_max_results: 200
+  lewes_chamber_workers: 4
+  lewes_chamber_timeout_seconds: 20
   companies_house_max_results: 500
