@@ -145,7 +145,7 @@ def _read_charity_rows(raw_zip: bytes) -> list[dict]:
         with archive.open(ranked[0]) as handle:
             payload = json.load(io.TextIOWrapper(handle, encoding="utf-8-sig"))
     if not isinstance(payload, list):
-        raise ValueError("Charity Commission charity extract was not a JSON list")
+        raise TypeError("Charity Commission charity extract was not a JSON list")
     return [row for row in payload if isinstance(row, dict)]
 
 
