@@ -150,6 +150,7 @@ def _read_charity_rows(raw_zip: bytes) -> list[dict]:
 
 
 def _candidate_rows(rows: list[dict], prefixes: tuple[str, ...]) -> list[dict]:
+    allowed_outward_codes = {prefix.replace(" ", "").upper() for prefix in prefixes}
     candidates: list[dict] = []
     for row in rows:
         status = str(row.get("charity_registration_status") or row.get("reg_status") or "").strip().casefold()
@@ -161,8 +162,8 @@ def _candidate_rows(rows: list[dict], prefixes: tuple[str, ...]) -> list[dict]:
         postcode = normalise_postcode(str(row.get("charity_contact_postcode") or ""))
         if not postcode:
             continue
-        compact = postcode.replace(" ", "").upper()
-        if prefixes and not any(compact.startswith(prefix.replace(" ", "")) for prefix in prefixes):
+        outward_code = postcode.split(" ", 1)[0].upper()
+        if allowed_outward_codes and outward_code not in allowed_outward_codes:
             continue
         candidates.append(row)
     return candidates
