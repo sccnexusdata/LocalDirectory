@@ -127,3 +127,34 @@ def test_json_ld_queue_prioritises_trade_websites_before_food(tmp_path):
     assert urls[:2] == ["https://builder-a.example", "https://builder-b.example"]
     assert "https://garage-a.example" in urls
     assert len(urls) == 4
+
+
+def test_runner_wires_opt_in_lewes_chamber_source(tmp_path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        yaml.safe_dump({
+            "project": {"name": "Test", "slug": "test"},
+            "location": {
+                "name": "Lewes",
+                "latitude": 50.8739,
+                "longitude": 0.0088,
+                "radius_km": 16.0934,
+            },
+            "sources": {
+                "enabled": ["lewes_chamber"],
+                "lewes_chamber_index_url": "https://directory.example/members/",
+                "lewes_chamber_max_results": 75,
+                "lewes_chamber_workers": 3,
+                "lewes_chamber_timeout_seconds": 9,
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    plugins = DirectoryRunner(load_config(config_path))._plugins()
+    chamber = next(plugin for plugin in plugins if plugin.name == "lewes_chamber")
+
+    assert chamber.index_url == "https://directory.example/members/"
+    assert chamber.max_results == 75
+    assert chamber.max_workers == 3
+    assert chamber.timeout == 9
