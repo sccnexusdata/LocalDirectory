@@ -25,6 +25,7 @@ LocalDirectory applies the architecture learned from LocalEventsEngine to persis
 |---|---|---|
 | Food Standards Agency FHRS | Authoritative food-establishment discovery/corroboration | None |
 | Care Quality Commission care directory | Authoritative registered health/social-care locations | None |
+| Charity Commission full register | Authoritative registered-charity identity and website discovery | None |
 | OpenStreetMap Overpass | Broad local place/service discovery and geospatial data | None |
 | Lewes Chamber of Commerce | Current local-member discovery/corroboration for the Lewes profile | None |
 | Companies House | Active-company candidate discovery and corporate identity | `COMPANIES_HOUSE_API_KEY` |
@@ -35,6 +36,8 @@ The Companies House adapter deliberately treats a registered office as **non-pub
 
 The CQC adapter uses the regulator's published care-directory CSV. Physical care locations can be mapped when they are geographically in scope. Services commonly delivered away from the registered office, such as home-care/community services, are retained as service-provider records but the administrative office address/geometry is suppressed from the public map contract.
 
+The Charity Commission adapter uses the Commission's daily full-register JSON extract. It prefilters configured nearby postcode districts, resolves the public contact postcodes to postcode centroids solely to enforce the configured radius, then discards that geometry from the listing. Charity contact addresses, phone numbers and email addresses are not published or mapped because a registered contact address is not assumed to be the charity's visitor or service location. An organisation-owned website may still be published when the register supplies one.
+
 The Lewes Chamber adapter deliberately does not ingest Chamber-listed phone/email details because the Chamber asks that member details are not used for unsolicited mass marketing. Organisation-owned websites can subsequently provide public contact details under the normal provenance rules.
 
 Authoritative reference documentation used for this implementation:
@@ -43,9 +46,9 @@ Authoritative reference documentation used for this implementation:
 - Companies House authentication: `https://developer.company-information.service.gov.uk/authentication`
 - Food Hygiene Rating Scheme API v2: `https://api.ratings.food.gov.uk/help`
 - Care Quality Commission data reuse/directory: `https://www.cqc.org.uk/about-us/transparency/using-cqc-data`
+- Charity Commission full register download: `https://register-of-charities.charitycommission.gov.uk/en/register/full-register-download`
 - OpenStreetMap Overpass API: `https://wiki.openstreetmap.org/wiki/Overpass_API`
 - Postcodes.io enrichment: `https://postcodes.io/docs/overview/`
-- Charity Commission API (planned charity adapter): `https://api-portal.charitycommission.gov.uk/`
 
 ## Quick start
 
@@ -109,7 +112,7 @@ Records move through a conservative lifecycle:
 A record can become publication-safe when one of the following applies and core locality/category checks also pass:
 
 - it is manually verified;
-- it comes from an authoritative Class A register appropriate to that entity type (for example FHRS food establishments or CQC regulated care locations);
+- it comes from an authoritative Class A register appropriate to that entity type (for example FHRS food establishments, CQC regulated care locations or Charity Commission registered charities);
 - two independent sources corroborate the same entity;
 - organisation-owned JSON-LD provides adequate operational identity and contact/location information.
 
@@ -135,7 +138,7 @@ AI is not used to decide whether a business is genuine or safe. Machine-learning
 
 `address_public`, `phone_public` and `email_public` are explicit fields. The public exporter removes suppressed fields and will not emit map geometry for a listing whose address is not public.
 
-This matters particularly for sole traders, home businesses, Companies House registered offices and service providers whose regulated/administrative office is not necessarily a consumer destination.
+This matters particularly for sole traders, home businesses, Companies House registered offices, Charity Commission contact addresses and service providers whose regulated/administrative office is not necessarily a consumer destination.
 
 ## Add another town
 
@@ -158,8 +161,8 @@ Then run:
 python run.py run --config config/brighton.yaml
 ```
 
-Locality-specific sources (for example a Chamber adapter) should be enabled only by that locality's configuration. Reusable authoritative/national adapters such as FHRS, CQC and OpenStreetMap remain generic.
+Locality-specific sources (for example a Chamber adapter) should be enabled only by that locality's configuration. Reusable authoritative/national adapters such as FHRS, CQC, Charity Commission and OpenStreetMap remain generic.
 
 ## Next source adapters
 
-The architecture intentionally leaves room for category-aware verification adapters including Charity Commission, regulated-trade claims where lawful/available, official education bulk datasets, local-authority data and controlled website discovery. New sources should create candidates and provenance; they should not bypass the publication gate.
+The architecture intentionally leaves room for category-aware verification adapters including regulated-trade claims where lawful/available, official education bulk datasets, local-authority data and controlled website discovery. New sources should create candidates and provenance; they should not bypass the publication gate.
