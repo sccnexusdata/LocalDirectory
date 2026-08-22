@@ -158,3 +158,36 @@ def test_runner_wires_opt_in_lewes_chamber_source(tmp_path):
     assert chamber.max_results == 75
     assert chamber.max_workers == 3
     assert chamber.timeout == 9
+
+
+def test_runner_wires_radius_filtered_charity_commission_source(tmp_path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        yaml.safe_dump({
+            "project": {"name": "Test", "slug": "test"},
+            "location": {
+                "name": "Lewes",
+                "postcode_area": "BN7",
+                "latitude": 50.8739,
+                "longitude": 0.0088,
+                "radius_km": 16.0934,
+            },
+            "sources": {
+                "enabled": ["charity_commission"],
+                "charity_commission_candidate_postcode_prefixes": ["BN7", "BN8", "TN22"],
+                "charity_commission_zip_url": "https://data.example/charity.zip",
+                "charity_commission_postcode_endpoint": "https://postcodes.example/postcodes",
+                "charity_commission_timeout_seconds": 70,
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    plugins = DirectoryRunner(load_config(config_path))._plugins()
+    charity = next(plugin for plugin in plugins if plugin.name == "charity_commission")
+
+    assert charity.radius_km == 16.0934
+    assert charity.candidate_postcode_prefixes == ("BN7", "BN8", "TN22")
+    assert charity.zip_url == "https://data.example/charity.zip"
+    assert charity.postcode_endpoint == "https://postcodes.example/postcodes"
+    assert charity.timeout == 70
