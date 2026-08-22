@@ -1,4 +1,5 @@
 from localdirectory.plugins.companies_house import CompaniesHousePlugin
+from localdirectory.plugins.cqc import CQCPlugin
 from localdirectory.plugins.fhrs import FHRSPlugin
 from localdirectory.plugins.json_ld import JSONLDPlugin
 from localdirectory.plugins.lewes_chamber import LewesChamberPlugin
@@ -7,6 +8,7 @@ from localdirectory.plugins.osm_overpass import OSMOverpassPlugin
 
 __all__ = [
     "CompaniesHousePlugin",
+    "CQCPlugin",
     "FHRSPlugin",
     "JSONLDPlugin",
     "LewesChamberPlugin",
