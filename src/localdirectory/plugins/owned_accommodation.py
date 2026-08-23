@@ -8,12 +8,12 @@ from bs4 import BeautifulSoup
 
 from localdirectory.models import ListingRecord, SourceRef
 from localdirectory.plugins.base import HarvestResult
-from localdirectory.text import normalise_postcode
 from localdirectory.plugins.visit_lewes_accommodation import ACCOMMODATION_EVIDENCE, _provider_supports_accommodation
+from localdirectory.text import normalise_postcode
 
 
 PHONE_RE = re.compile(r"(?:\+44\s?\d{2,4}|0\d{2,4})[\s\d]{6,12}")
-POSTCODE_RE = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", re.I)
+POSTCODE_RE = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", re.IGNORECASE)
 
 
 class OwnedAccommodationPlugin:
