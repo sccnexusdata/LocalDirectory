@@ -21,6 +21,7 @@ from localdirectory.plugins import (
     LewesChamberPlugin,
     ManualCSVPlugin,
     OSMOverpassPlugin,
+    OwnedAccommodationPlugin,
     VisitLewesAccommodationPlugin,
 )
 from localdirectory.plugins.base import HarvestResult
@@ -311,6 +312,14 @@ class DirectoryRunner:
                     radius_km,
                     endpoint=str(sources.get("overpass_endpoint", "https://overpass-api.de/api/interpreter")),
                     timeout=max(self.timeout, 45),
+                    user_agent=self.user_agent,
+                )
+            )
+        if "owned_accommodation" in enabled:
+            plugins.append(
+                OwnedAccommodationPlugin(
+                    list(sources.get("owned_accommodation_seeds", [])),
+                    timeout=int(sources.get("owned_accommodation_timeout_seconds", min(self.timeout, 20))),
                     user_agent=self.user_agent,
                 )
             )
