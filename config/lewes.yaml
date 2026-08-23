@@ -41,6 +41,7 @@ sources:
     - cqc
     - charity_commission
     - osm_overpass
+    - visit_lewes_accommodation
     - lewes_chamber
     - companies_house
     - json_ld
@@ -75,6 +76,15 @@ sources:
     - RH16
     - RH17
   overpass_endpoint: https://overpass-api.de/api/interpreter
+  visit_lewes_accommodation_index_urls:
+    - https://www.visitlewes.co.uk/accommodation/bed-and-breakfasts?p=1
+    - https://www.visitlewes.co.uk/accommodation/self-catering?p=1
+    - https://www.visitlewes.co.uk/accommodation/hotels
+    - https://www.visitlewes.co.uk/accommodation/pubs-and-inns?p=1
+  visit_lewes_accommodation_max_results: 160
+  visit_lewes_accommodation_pages_per_index: 4
+  visit_lewes_accommodation_workers: 4
+  visit_lewes_accommodation_timeout_seconds: 20
   lewes_chamber_index_url: https://www.leweschamber.co.uk/members-directory/
   lewes_chamber_max_results: 200
   lewes_chamber_workers: 4
