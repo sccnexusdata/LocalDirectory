@@ -1,10 +1,12 @@
+from bs4 import BeautifulSoup
+
+from localdirectory.plugins.owned_accommodation import _parse_owned_accommodation
 from localdirectory.plugins.visit_lewes_accommodation import (
     _detail_urls,
     _external_website,
     _parse_detail,
     _provider_supports_accommodation,
 )
-from bs4 import BeautifulSoup
 
 
 def test_detail_urls_accept_property_pages_but_not_category_pages():
@@ -77,3 +79,30 @@ def test_booking_and_social_links_are_not_treated_as_owned_websites():
     assert _external_website(soup, "https://www.visitlewes.co.uk/accommodation/example") == (
         "https://provider.example/"
     )
+
+
+def test_owned_seed_requires_explicit_accommodation_and_parses_public_contact():
+    html = """
+    <html><head><title>The White Hart - Lewes</title></head><body>
+      <h1>Welcome to The White Hart</h1>
+      <p>Book your stay with us. We have 23 individually styled bedrooms.</p>
+      <p>55 High St, Lewes, East Sussex, BN7 1XE</p>
+      <a href="tel:01273476694">01273 476694</a>
+    </body></html>
+    """
+    record = _parse_owned_accommodation(html, "https://whitehartlewes.com/", name_hint="The White Hart")
+    assert record is not None
+    assert record.primary_category == "accommodation"
+    assert record.postcode == "BN7 1XE"
+    assert record.phone == "01273476694"
+    assert record.sources[0].source_class == "B"
+
+
+def test_owned_seed_rejects_pub_page_with_no_rooms():
+    html = """
+    <html><body><h1>The Swan Inn</h1>
+      <p>Food, ales, a beer garden and private functions.</p>
+      <p>30A Southover High Street, Lewes, BN7 1HU</p>
+    </body></html>
+    """
+    assert _parse_owned_accommodation(html, "https://theswaninnlewes.co.uk/", name_hint="The Swan Inn") is None
