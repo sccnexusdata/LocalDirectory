@@ -18,14 +18,7 @@ DEFAULT_INDEX_URL = "https://www.cqc.org.uk/about-us/transparency/using-cqc-data
 
 
 class CQCPlugin:
-    """Harvest current CQC-regulated health and social-care locations.
-
-    CQC explicitly permits reuse of its care-directory data under the Open
-    Government Licence. Physical care locations are retained as places. Services
-    commonly delivered away from the registered office (for example home-care
-    agencies) are kept as service providers and their office geometry is not
-    exposed as a consumer destination.
-    """
+    """Harvest current CQC-regulated health and social-care locations."""
 
     name = "cqc"
 
@@ -113,6 +106,23 @@ def _discover_csv_url(html: str, base_url: str) -> str:
     return candidates[0][1]
 
 
+def _decode_directory(raw: bytes) -> str:
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return raw.decode("utf-16", errors="replace")
+    sample = raw[:4096]
+    if sample and sample.count(b"\x00") > len(sample) // 8:
+        return raw.decode("utf-16", errors="replace")
+    return raw.decode("utf-8-sig", errors="replace")
+
+
+def _dialect(text: str) -> csv.Dialect:
+    sample = text[:65536]
+    try:
+        return csv.Sniffer().sniff(sample, delimiters=",\t;|")
+    except csv.Error:
+        return csv.excel
+
+
 def _parse_directory_csv(
     raw: bytes,
     *,
@@ -121,14 +131,19 @@ def _parse_directory_csv(
     radius_km: float,
     postcode_area: str,
 ) -> list[ListingRecord]:
-    text = raw.decode("utf-8-sig", errors="replace")
-    rows = list(csv.reader(io.StringIO(text)))
+    text = _decode_directory(raw)
+    if "<html" in text[:1000].casefold() or "<!doctype html" in text[:1000].casefold():
+        raise ValueError("CQC directory download returned HTML instead of CSV data")
+    dialect = _dialect(text)
+    rows = list(csv.reader(io.StringIO(text), dialect=dialect))
     header_index = _header_index(rows)
     if header_index is None:
-        raise ValueError("CQC directory header row was not found")
+        preview = " | ".join(" / ".join(row[:4]) for row in rows[:3])[:400]
+        raise ValueError(f"CQC directory header row was not found; preview={preview!r}")
 
     header = rows[header_index]
-    reader = csv.DictReader(io.StringIO(_rows_to_csv([header, *rows[header_index + 1 :]])))
+    data = _rows_to_csv([header, *rows[header_index + 1 :]], dialect.delimiter)
+    reader = csv.DictReader(io.StringIO(data), delimiter=dialect.delimiter)
     records: list[ListingRecord] = []
     for row in reader:
         record = _record_from_row(
@@ -143,17 +158,21 @@ def _parse_directory_csv(
     return records
 
 
-def _rows_to_csv(rows: list[list[str]]) -> str:
+def _normalise_header(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value).casefold())
+
+
+def _rows_to_csv(rows: list[list[str]], delimiter: str = ",") -> str:
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = csv.writer(output, delimiter=delimiter)
     writer.writerows(rows)
     return output.getvalue()
 
 
 def _header_index(rows: list[list[str]]) -> int | None:
-    for index, row in enumerate(rows[:20]):
-        normalised = {cell.strip().casefold() for cell in row}
-        if "location id" in normalised and "location name" in normalised:
+    for index, row in enumerate(rows[:50]):
+        normalised = {_normalise_header(cell) for cell in row}
+        if "locationid" in normalised and "locationname" in normalised:
             return index
     return None
 
@@ -198,7 +217,8 @@ def _record_from_row(
 
     description_kind = service_text or "health or social care service"
     description = (
-        f"CQC-registered {description_kind}. Check the CQC record and provider directly for current service scope, ratings and availability."
+        f"CQC-registered {description_kind}. Check the CQC record and provider directly for current "
+        "service scope, ratings and availability."
     )
 
     regulator_ids = {"cqc": location_id}
@@ -220,15 +240,7 @@ def _record_from_row(
         service_area=["Lewes"] if remote_service else [],
         company_number=provider_company,
         regulator_ids=regulator_ids,
-        sources=[
-            SourceRef(
-                "Care Quality Commission",
-                "official_register",
-                "A",
-                source_id=location_id,
-                source_url=source_url,
-            )
-        ],
+        sources=[SourceRef("Care Quality Commission", "official_register", "A", source_id=location_id, source_url=source_url)],
         address_public=not remote_service,
         phone_public=True,
         email_public=False,
@@ -238,9 +250,13 @@ def _record_from_row(
 
 
 def _field(row: dict[str, str], *keys: str) -> str:
-    by_key = {str(key).strip().casefold(): str(value or "").strip() for key, value in row.items() if key is not None}
+    by_key = {
+        _normalise_header(str(key)): str(value or "").strip()
+        for key, value in row.items()
+        if key is not None
+    }
     for key in keys:
-        value = by_key.get(key.casefold(), "")
+        value = by_key.get(_normalise_header(key), "")
         if value:
             return value
     return ""

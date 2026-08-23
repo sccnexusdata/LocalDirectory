@@ -23,9 +23,7 @@ def test_parse_cqc_csv_filters_radius_and_does_not_map_homecare_office():
         radius_km=16.0934,
         postcode_area="BN7",
     )
-
     assert [record.name for record in records] == ["Lewes Dental Centre", "Lewes Home Care"]
-
     dentist = records[0]
     assert dentist.listing_type == "place"
     assert dentist.primary_category == "health_care"
@@ -33,7 +31,6 @@ def test_parse_cqc_csv_filters_radius_and_does_not_map_homecare_office():
     assert dentist.latitude == 50.8739
     assert dentist.regulator_ids["cqc"] == "lew1"
     assert dentist.sources[0].source_class == "A"
-
     homecare = records[1]
     assert homecare.listing_type == "service_provider"
     assert homecare.address_public is False
@@ -56,3 +53,20 @@ def test_parse_cqc_csv_allows_local_postcode_for_missing_coordinates():
     assert len(records) == 1
     assert records[0].name == "Lewes Clinic"
     assert records[0].latitude is None
+
+
+def test_parse_cqc_utf16_tab_file_with_compact_headers():
+    text = (
+        "Location_ID\tLocation_Name\tLocation_Postal_Code\tLocation_Primary_Inspection_Category\tLocation_Latitude\tLocation_Longitude\n"
+        "lew4\tLewes Care Centre\tBN7 2AA\tCare home\t50.8739\t0.0088\n"
+    )
+    records = _parse_directory_csv(
+        text.encode("utf-16"),
+        centre_latitude=50.8739,
+        centre_longitude=0.0088,
+        radius_km=16.0934,
+        postcode_area="BN7",
+    )
+    assert len(records) == 1
+    assert records[0].name == "Lewes Care Centre"
+    assert records[0].regulator_ids["cqc"] == "lew4"
