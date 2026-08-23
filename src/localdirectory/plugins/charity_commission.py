@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import io
 import json
 import zipfile
@@ -20,13 +21,7 @@ DEFAULT_POSTCODE_ENDPOINT = "https://api.postcodes.io/postcodes"
 
 
 class CharityCommissionPlugin:
-    """Harvest registered charities whose public contact postcode is local.
-
-    Charity Commission contact addresses are useful for locality discovery but are
-    not assumed to be service or visitor locations. The adapter therefore uses the
-    postcode only to establish radius membership, then suppresses the address and
-    geometry from the public record.
-    """
+    """Harvest registered charities whose public contact postcode is local."""
 
     name = "charity_commission"
 
@@ -68,7 +63,7 @@ class CharityCommissionPlugin:
                 return HarvestResult(
                     self.name,
                     ok=False,
-                    message="Charity Commission charity JSON extract link was not found",
+                    message="Charity Commission charity extract link was not found",
                     requests_made=requests_made,
                 )
 
@@ -77,7 +72,12 @@ class CharityCommissionPlugin:
         response.raise_for_status()
         rows = _read_charity_rows(response.content)
         candidates = _candidate_rows(rows, self.candidate_postcode_prefixes)
-        postcodes = sorted({normalise_postcode(str(row.get("charity_contact_postcode") or "")) for row in candidates})
+        postcodes = sorted(
+            {
+                normalise_postcode(str(row.get("charity_contact_postcode") or ""))
+                for row in candidates
+            }
+        )
         postcodes = [postcode for postcode in postcodes if postcode]
         resolved, postcode_requests = _resolve_postcodes(
             postcodes,
@@ -113,13 +113,17 @@ def _discover_charity_zip_url(html: str, base_url: str) -> str:
         row_text = parent.get_text(" ", strip=True).casefold() if parent else ""
         score = 0
         if "charity" in lower_href:
-            score += 6
+            score += 8
         if "charity" in row_text:
             score += 5
-        if "json" in lower_href or "json" in anchor_text or "json" in row_text:
-            score += 4
+        if "/json/" in lower_href or "json" in lower_href:
+            score += 20
+        elif "json" in anchor_text and "text" not in anchor_text:
+            score += 10
+        if "/text/" in lower_href or "tab" in anchor_text or "text" in anchor_text:
+            score -= 3
         if any(term in lower_href for term in ("annual", "classification", "trustee", "history", "area_of_operation")):
-            score -= 8
+            score -= 20
         if score > 0:
             candidates.append((score, href))
     if not candidates:
@@ -128,25 +132,51 @@ def _discover_charity_zip_url(html: str, base_url: str) -> str:
     return candidates[0][1]
 
 
+def _normalise_row_keys(row: dict) -> dict:
+    return {
+        str(key).strip().casefold().replace(" ", "_"): value
+        for key, value in row.items()
+        if key is not None
+    }
+
+
 def _read_charity_rows(raw_zip: bytes) -> list[dict]:
     with zipfile.ZipFile(io.BytesIO(raw_zip)) as archive:
-        names = [name for name in archive.namelist() if name.casefold().endswith(".json")]
-        ranked = sorted(
-            names,
-            key=lambda name: (
-                0 if "charity" in name.casefold() else 1,
-                1 if any(term in name.casefold() for term in ("annual", "classification", "trustee", "history")) else 0,
-                len(name),
-                name,
-            ),
-        )
-        if not ranked:
-            raise ValueError("Charity Commission ZIP did not contain a JSON file")
-        with archive.open(ranked[0]) as handle:
-            payload = json.load(io.TextIOWrapper(handle, encoding="utf-8-sig"))
-    if not isinstance(payload, list):
-        raise TypeError("Charity Commission charity extract was not a JSON list")
-    return [row for row in payload if isinstance(row, dict)]
+        names = [name for name in archive.namelist() if not name.endswith("/")]
+        json_names = [name for name in names if name.casefold().endswith(".json")]
+        if json_names:
+            ranked = sorted(
+                json_names,
+                key=lambda name: (
+                    0 if "charity" in name.casefold() else 1,
+                    1 if any(term in name.casefold() for term in ("annual", "classification", "trustee", "history")) else 0,
+                    len(name),
+                    name,
+                ),
+            )
+            with archive.open(ranked[0]) as handle:
+                payload = json.load(io.TextIOWrapper(handle, encoding="utf-8-sig"))
+            if not isinstance(payload, list):
+                raise TypeError("Charity Commission charity extract was not a JSON list")
+            return [_normalise_row_keys(row) for row in payload if isinstance(row, dict)]
+
+        text_names = [
+            name
+            for name in names
+            if name.casefold().endswith((".txt", ".tsv", ".csv", ".bcp"))
+            and "charity" in name.casefold()
+            and not any(term in name.casefold() for term in ("annual", "classification", "trustee", "history"))
+        ]
+        if not text_names:
+            raise ValueError("Charity Commission ZIP contained neither charity JSON nor tab-delimited text")
+        text_names.sort(key=lambda name: (len(name), name))
+        with archive.open(text_names[0]) as handle:
+            text = io.TextIOWrapper(handle, encoding="utf-8-sig", errors="replace")
+            reader = csv.DictReader(text, delimiter="\t")
+            rows = [_normalise_row_keys(row) for row in reader if isinstance(row, dict)]
+        if not rows:
+            raise ValueError("Charity Commission tab-delimited charity extract contained no data rows")
+        return rows
 
 
 def _candidate_rows(rows: list[dict], prefixes: tuple[str, ...]) -> list[dict]:
@@ -223,9 +253,7 @@ def _records_from_rows(
             continue
         name = str(row.get("charity_name") or "").strip()
         organisation_number = str(row.get("organisation_number") or "").strip()
-        registered_number = str(
-            row.get("registered_charity_number") or row.get("reg_charity_number") or ""
-        ).strip()
+        registered_number = str(row.get("registered_charity_number") or row.get("reg_charity_number") or "").strip()
         if not name or not (organisation_number or registered_number):
             continue
         company_number = str(row.get("charity_company_registration_number") or "").strip()
@@ -236,17 +264,16 @@ def _records_from_rows(
             "https://register-of-charities.charitycommission.gov.uk/en/charity-search/-/charity-details/"
             f"{organisation_number or registered_number}"
         )
-        description = (
-            "Registered charity with a Charity Commission contact postcode within the configured local radius. "
-            "The registered contact address is not treated as a visitor or service location; check the charity's "
-            "official website and register entry for current activities and contact details."
-        )
         records.append(
             ListingRecord(
                 name=name,
                 listing_type="service_provider",
                 primary_category="community_charities",
-                description=description,
+                description=(
+                    "Registered charity with a Charity Commission contact postcode within the configured local radius. "
+                    "The registered contact address is not treated as a visitor or service location; check the charity's "
+                    "official website and register entry for current activities and contact details."
+                ),
                 website=website,
                 address=address,
                 postcode=postcode,
