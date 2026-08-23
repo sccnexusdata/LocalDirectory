@@ -244,7 +244,7 @@ def _pagination_urls(html: str, base_url: str, origin_path: str) -> list[str]:
 
 
 def _text_parent_with_postcode(soup: BeautifulSoup) -> tuple[str, str]:
-    postcode_re = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", re.I)
+    postcode_re = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", re.IGNORECASE)
     for node in soup.find_all(string=postcode_re):
         parent = node.parent
         text = " ".join(parent.stripped_strings) if parent else str(node)
@@ -277,13 +277,14 @@ def _external_website(soup: BeautifulSoup, source_url: str) -> str:
 
 
 def _type_text(soup: BeautifulSoup) -> str:
-    full = " ".join(soup.stripped_strings)
-    match = re.search(
-        r"\bType\s*:\s*([^|]{2,60}?)(?=\s{2,}|\s(?:Address|About|Website|Email|Tel)\b)",
-        full,
-        flags=re.I,
-    )
-    return match.group(1).strip() if match else "Accommodation"
+    for node in soup.find_all(string=re.compile(r"\bType\s*:", re.IGNORECASE)):
+        text = " ".join(node.parent.stripped_strings) if node.parent else str(node)
+        match = re.search(r"\bType\s*:\s*(.+)$", text, flags=re.IGNORECASE)
+        if match:
+            value = match.group(1).strip()
+            if 1 < len(value) <= 80:
+                return value
+    return "Accommodation"
 
 
 def _provider_identity_tokens(name: str) -> set[str]:
