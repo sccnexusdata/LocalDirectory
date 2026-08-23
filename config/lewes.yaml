@@ -41,6 +41,7 @@ sources:
     - cqc
     - charity_commission
     - osm_overpass
+    - owned_accommodation
     - visit_lewes_accommodation
     - lewes_chamber
     - companies_house
@@ -76,6 +77,10 @@ sources:
     - RH16
     - RH17
   overpass_endpoint: https://overpass-api.de/api/interpreter
+  owned_accommodation_seeds:
+    - name: The White Hart
+      url: https://whitehartlewes.com/
+  owned_accommodation_timeout_seconds: 20
   visit_lewes_accommodation_index_urls:
     - https://www.visitlewes.co.uk/accommodation/bed-and-breakfasts?p=1
     - https://www.visitlewes.co.uk/accommodation/self-catering?p=1
