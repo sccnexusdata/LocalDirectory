@@ -13,12 +13,12 @@ from localdirectory.plugins.charity_commission import (
 def test_discover_charity_json_zip_prefers_main_charity_row():
     html = """
     <table>
-      <tr><td>charity</td><td><a href="/data/publicextract.charity.zip">download json</a></td></tr>
-      <tr><td>charity_annual_return_history</td><td><a href="/data/annual.zip">download json</a></td></tr>
+      <tr><td>charity</td><td><a href="https://blob.example/data/json/publicextract.charity.zip">download json</a><a href="https://blob.example/data/text/publicextract.charity.zip">download text</a></td></tr>
+      <tr><td>charity_annual_return_history</td><td><a href="https://blob.example/data/json/annual.zip">download json</a></td></tr>
     </table>
     """
     assert _discover_charity_zip_url(html, "https://register-of-charities.charitycommission.gov.uk/en/register/") == (
-        "https://register-of-charities.charitycommission.gov.uk/data/publicextract.charity.zip"
+        "https://blob.example/data/json/publicextract.charity.zip"
     )
 
 
@@ -30,40 +30,25 @@ def test_read_charity_rows_from_json_zip():
     assert _read_charity_rows(buffer.getvalue()) == payload
 
 
+def test_read_charity_rows_from_tab_delimited_zip():
+    raw = (
+        "organisation_number\tcharity_name\tcharity_registration_status\tlinked_charity_number\tcharity_contact_postcode\n"
+        "12\tLewes Good Cause\tRegistered\t0\tBN7 2AA\n"
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("publicextract.charity.txt", raw)
+    rows = _read_charity_rows(buffer.getvalue())
+    assert rows[0]["charity_name"] == "Lewes Good Cause"
+    assert rows[0]["charity_contact_postcode"] == "BN7 2AA"
+
+
 def test_charity_candidates_require_registered_main_charity_and_prefix():
     rows = [
-        {
-            "organisation_number": 1,
-            "registered_charity_number": 100001,
-            "charity_name": "Lewes Good Cause",
-            "charity_registration_status": "Registered",
-            "linked_charity_number": 0,
-            "charity_contact_postcode": "BN7 2AA",
-        },
-        {
-            "organisation_number": 2,
-            "registered_charity_number": 100002,
-            "charity_name": "Removed Cause",
-            "charity_registration_status": "Removed",
-            "linked_charity_number": 0,
-            "charity_contact_postcode": "BN7 2AB",
-        },
-        {
-            "organisation_number": 3,
-            "registered_charity_number": 100003,
-            "charity_name": "Linked Cause",
-            "charity_registration_status": "Registered",
-            "linked_charity_number": 1,
-            "charity_contact_postcode": "BN7 2AC",
-        },
-        {
-            "organisation_number": 4,
-            "registered_charity_number": 100004,
-            "charity_name": "Far Cause",
-            "charity_registration_status": "Registered",
-            "linked_charity_number": 0,
-            "charity_contact_postcode": "SW1A 1AA",
-        },
+        {"organisation_number": 1, "registered_charity_number": 100001, "charity_name": "Lewes Good Cause", "charity_registration_status": "Registered", "linked_charity_number": 0, "charity_contact_postcode": "BN7 2AA"},
+        {"organisation_number": 2, "registered_charity_number": 100002, "charity_name": "Removed Cause", "charity_registration_status": "Removed", "linked_charity_number": 0, "charity_contact_postcode": "BN7 2AB"},
+        {"organisation_number": 3, "registered_charity_number": 100003, "charity_name": "Linked Cause", "charity_registration_status": "Registered", "linked_charity_number": 1, "charity_contact_postcode": "BN7 2AC"},
+        {"organisation_number": 4, "registered_charity_number": 100004, "charity_name": "Far Cause", "charity_registration_status": "Registered", "linked_charity_number": 0, "charity_contact_postcode": "SW1A 1AA"},
     ]
     candidates = _candidate_rows(rows, ("BN7", "BN8"))
     assert [row["charity_name"] for row in candidates] == ["Lewes Good Cause"]
@@ -83,14 +68,7 @@ def test_charity_records_filter_radius_and_never_publish_contact_address_or_pin(
             "charity_contact_web": "www.example.org",
             "charity_company_registration_number": "01234567",
         },
-        {
-            "organisation_number": 102,
-            "registered_charity_number": 7654321,
-            "charity_name": "Outside Cause",
-            "charity_registration_status": "Registered",
-            "linked_charity_number": 0,
-            "charity_contact_postcode": "BN1 1AA",
-        },
+        {"organisation_number": 102, "registered_charity_number": 7654321, "charity_name": "Outside Cause", "charity_registration_status": "Registered", "linked_charity_number": 0, "charity_contact_postcode": "BN1 1AA"},
     ]
     records = _records_from_rows(
         rows,
