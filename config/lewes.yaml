@@ -80,6 +80,8 @@ sources:
   owned_accommodation_seeds:
     - name: The White Hart
       url: https://whitehartlewes.com/
+    - name: Lewes Heights
+      url: https://lewesheights.co.uk/
   owned_accommodation_timeout_seconds: 20
   visit_lewes_accommodation_index_urls:
     - https://www.visitlewes.co.uk/accommodation/bed-and-breakfasts?p=1

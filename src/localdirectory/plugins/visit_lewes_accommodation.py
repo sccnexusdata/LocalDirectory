@@ -25,10 +25,17 @@ CATEGORY_SLUGS = {
     "villages",
     "newhaven",
     "seaford",
+    "pet-friendly",
+    "dog-friendly",
+    "accessible",
+    "family-friendly",
+    "special-offers",
+    "last-minute",
 }
 
 BLOCKED_PROVIDER_HOST_FRAGMENTS = {
     "booking.com",
+    "direct-book.com",
     "expedia.",
     "hotels.com",
     "tripadvisor.",
@@ -39,6 +46,9 @@ BLOCKED_PROVIDER_HOST_FRAGMENTS = {
     "twitter.",
     "youtube.",
     "google.",
+    "simplevieweurope.com",
+    "simpleviewinc.com",
+    "simpleviewcms.com",
 }
 
 ACCOMMODATION_EVIDENCE = (
@@ -65,18 +75,32 @@ ACCOMMODATION_EVIDENCE = (
 )
 
 STOPWORDS = {
-    "the", "and", "hotel", "inn", "pub", "rooms", "room", "accommodation",
-    "lewes", "sussex", "east", "at", "of", "in", "a", "an",
+    "the",
+    "and",
+    "hotel",
+    "inn",
+    "pub",
+    "rooms",
+    "room",
+    "accommodation",
+    "lewes",
+    "sussex",
+    "east",
+    "at",
+    "of",
+    "in",
+    "a",
+    "an",
 }
 
 
 class VisitLewesAccommodationPlugin:
     """Discover explicit accommodation and seek provider-owned corroboration.
 
-    Visit Lewes is treated as a Class C tourism-directory source. A provider
-    website is added as Class B only when the external site itself contains both
-    identity evidence and explicit accommodation language. Venue-name inference
-    alone is never sufficient.
+    Visit Lewes is Class C discovery/corroboration. An external provider website
+    is added as Class B only when the Visit Lewes link is explicitly labelled as
+    a website and the provider site itself matches the venue identity and contains
+    explicit accommodation language.
     """
 
     name = "visit_lewes_accommodation"
@@ -91,7 +115,7 @@ class VisitLewesAccommodationPlugin:
         max_workers: int = 4,
         max_pages_per_index: int = 4,
     ):
-        self.index_urls = [str(v).strip() for v in index_urls if str(v).strip()]
+        self.index_urls = [str(value).strip() for value in index_urls if str(value).strip()]
         self.timeout = int(timeout)
         self.user_agent = user_agent
         self.max_results = max(0, int(max_results))
@@ -99,7 +123,10 @@ class VisitLewesAccommodationPlugin:
         self.max_pages_per_index = max(1, min(int(max_pages_per_index), 8))
 
     def harvest(self) -> HarvestResult:
-        headers = {"User-Agent": self.user_agent, "Accept": "text/html,application/xhtml+xml"}
+        headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "text/html,application/xhtml+xml",
+        }
         detail_urls: set[str] = set()
         requests_made = 0
         index_failures = 0
@@ -115,6 +142,7 @@ class VisitLewesAccommodationPlugin:
             urls = urls[: self.max_results]
         else:
             urls = []
+
         if not urls:
             return HarvestResult(
                 self.name,
@@ -126,7 +154,7 @@ class VisitLewesAccommodationPlugin:
         records: list[ListingRecord] = []
         parse_failures = 0
         with ThreadPoolExecutor(max_workers=min(self.max_workers, len(urls))) as executor:
-            for record, made in executor.map(lambda u: self._fetch_detail(u, headers), urls):
+            for record, made in executor.map(lambda url: self._fetch_detail(url, headers), urls):
                 requests_made += made
                 if record is None:
                     parse_failures += 1
@@ -134,21 +162,28 @@ class VisitLewesAccommodationPlugin:
                     records.append(record)
 
         provider_verified = sum(
-            1 for record in records if any(source.source_class.upper() == "B" for source in record.sources)
+            1
+            for record in records
+            if any(source.source_class.upper() == "B" for source in record.sources)
         )
         return HarvestResult(
             self.name,
             records=records,
             ok=bool(records),
             message=(
-                f"Harvested {len(records)} explicit accommodation records from {len(urls)} Visit Lewes detail pages; "
-                f"{provider_verified} provider-owned corroboration(s); {parse_failures} detail failure(s); "
-                f"{index_failures} index failure(s)"
+                f"Harvested {len(records)} explicit accommodation records from "
+                f"{len(urls)} Visit Lewes detail pages; "
+                f"{provider_verified} provider-owned corroboration(s); "
+                f"{parse_failures} detail failure(s); {index_failures} index failure(s)"
             ),
             requests_made=requests_made,
         )
 
-    def _discover_index(self, index_url: str, headers: dict[str, str]) -> tuple[set[str], int, int]:
+    def _discover_index(
+        self,
+        index_url: str,
+        headers: dict[str, str],
+    ) -> tuple[set[str], int, int]:
         pending = deque([index_url])
         visited: set[str] = set()
         details: set[str] = set()
@@ -176,7 +211,11 @@ class VisitLewesAccommodationPlugin:
 
         return details, requests_made, failures
 
-    def _fetch_detail(self, url: str, headers: dict[str, str]) -> tuple[ListingRecord | None, int]:
+    def _fetch_detail(
+        self,
+        url: str,
+        headers: dict[str, str],
+    ) -> tuple[ListingRecord | None, int]:
         try:
             response = requests.get(url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
@@ -188,9 +227,14 @@ class VisitLewesAccommodationPlugin:
         if record is None or not record.website:
             return record, requests_made
 
-        provider = _verify_provider_website(record.name, record.website, headers, self.timeout)
-        requests_made += provider[1]
-        if provider[0]:
+        verified, made = _verify_provider_website(
+            record.name,
+            record.website,
+            headers,
+            self.timeout,
+        )
+        requests_made += made
+        if verified:
             record.sources.append(
                 SourceRef(
                     source_name="provider_website",
@@ -200,10 +244,14 @@ class VisitLewesAccommodationPlugin:
                     source_url=record.website,
                 )
             )
-            record.field_provenance.setdefault("primary_category", []).append("provider_website")
+            record.field_provenance.setdefault("primary_category", []).append(
+                "provider_website"
+            )
             record.field_provenance.setdefault("website", []).append("provider_website")
             record.quality_flags = [
-                flag for flag in record.quality_flags if flag != "accommodation_provider_not_yet_corroborated"
+                flag
+                for flag in record.quality_flags
+                if flag != "accommodation_provider_not_yet_corroborated"
             ]
             record.quality_flags.append("accommodation_provider_owned_site_corroborated")
         return record, requests_made
@@ -244,7 +292,10 @@ def _pagination_urls(html: str, base_url: str, origin_path: str) -> list[str]:
 
 
 def _text_parent_with_postcode(soup: BeautifulSoup) -> tuple[str, str]:
-    postcode_re = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", re.IGNORECASE)
+    postcode_re = re.compile(
+        r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b",
+        re.IGNORECASE,
+    )
     for node in soup.find_all(string=postcode_re):
         parent = node.parent
         text = " ".join(parent.stripped_strings) if parent else str(node)
@@ -257,29 +308,33 @@ def _text_parent_with_postcode(soup: BeautifulSoup) -> tuple[str, str]:
 
 
 def _external_website(soup: BeautifulSoup, source_url: str) -> str:
+    """Return only an explicitly labelled provider website link."""
     source_host = urlparse(source_url).netloc.casefold()
-    preferred: list[str] = []
-    fallback: list[str] = []
     for anchor in soup.find_all("a", href=True):
+        label = " ".join(anchor.stripped_strings).casefold()
+        if "website" not in label:
+            continue
         href = urljoin(source_url, str(anchor.get("href") or "")).strip()
         parsed = urlparse(href)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             continue
         host = parsed.netloc.casefold()
-        if host == source_host or any(fragment in host for fragment in BLOCKED_PROVIDER_HOST_FRAGMENTS):
+        if host == source_host:
             continue
-        label = " ".join(anchor.stripped_strings).casefold()
-        if "website" in label or "visit website" in label:
-            preferred.append(href)
-        else:
-            fallback.append(href)
-    return (preferred or fallback or [""])[0]
+        if any(fragment in host for fragment in BLOCKED_PROVIDER_HOST_FRAGMENTS):
+            continue
+        return href
+    return ""
 
 
 def _type_text(soup: BeautifulSoup) -> str:
     for node in soup.find_all(string=re.compile(r"\bType\s*:", re.IGNORECASE)):
         text = " ".join(node.parent.stripped_strings) if node.parent else str(node)
-        match = re.search(r"\bType\s*:\s*(.+)$", text, flags=re.IGNORECASE)
+        match = re.search(
+            r"\bType\s*:\s*(.+)$",
+            text,
+            flags=re.IGNORECASE,
+        )
         if match:
             value = match.group(1).strip()
             if 1 < len(value) <= 80:
@@ -288,11 +343,11 @@ def _type_text(soup: BeautifulSoup) -> str:
 
 
 def _provider_identity_tokens(name: str) -> set[str]:
-    tokens = {
-        token for token in re.findall(r"[a-z0-9]+", name.casefold())
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", name.casefold())
         if len(token) >= 3 and token not in STOPWORDS
     }
-    return tokens
 
 
 def _provider_supports_accommodation(name: str, html: str) -> bool:
@@ -302,8 +357,7 @@ def _provider_supports_accommodation(name: str, html: str) -> bool:
     tokens = _provider_identity_tokens(name)
     if not tokens:
         return False
-    page_tokens = set(re.findall(r"[a-z0-9]+", text))
-    overlap = tokens & page_tokens
+    overlap = tokens & set(re.findall(r"[a-z0-9]+", text))
     return bool(overlap) and len(overlap) >= max(1, min(2, len(tokens)))
 
 
@@ -334,6 +388,10 @@ def _parse_detail(html: str, source_url: str) -> ListingRecord | None:
     if not name or name.casefold() in {"accommodation", "visit lewes"}:
         return None
 
+    slug = source_url.rstrip("/").rsplit("/", 1)[-1].casefold()
+    if slug in CATEGORY_SLUGS:
+        return None
+
     address, postcode = _text_parent_with_postcode(soup)
     if not postcode:
         return None
@@ -347,22 +405,21 @@ def _parse_detail(html: str, source_url: str) -> ListingRecord | None:
         return None
 
     website = _external_website(soup, source_url)
-    description = (
-        f"{accommodation_type}. Accommodation identity listed by Visit Lewes; "
-        "check current facilities, prices and availability with the provider."
-    )
     source = SourceRef(
         source_name="visit_lewes_accommodation",
         source_type="official_tourism_directory",
         source_class="C",
-        source_id=source_url.rstrip("/").rsplit("/", 1)[-1],
+        source_id=slug,
         source_url=source_url,
     )
     return ListingRecord(
         name=name,
         listing_type="place",
         primary_category="accommodation",
-        description=description,
+        description=(
+            f"{accommodation_type}. Accommodation identity listed by Visit Lewes; "
+            "check current facilities, prices and availability with the provider."
+        ),
         website=website,
         address=address,
         postcode=postcode,
