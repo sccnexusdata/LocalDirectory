@@ -21,6 +21,7 @@ from localdirectory.plugins import (
     LewesChamberPlugin,
     ManualCSVPlugin,
     OSMOverpassPlugin,
+    VisitLewesAccommodationPlugin,
 )
 from localdirectory.plugins.base import HarvestResult
 from localdirectory.postcode_enrichment import enrich_missing_coordinates
@@ -206,8 +207,6 @@ class DirectoryRunner:
         for entries in grouped.values():
             entries.sort()
 
-        # Trade/service sectors need deliberate corroboration because public registers
-        # naturally over-represent food establishments and physical retail.
         for category in TRADE_CATEGORIES:
             added = 0
             for _, website in grouped.get(category, []):
@@ -313,6 +312,17 @@ class DirectoryRunner:
                     endpoint=str(sources.get("overpass_endpoint", "https://overpass-api.de/api/interpreter")),
                     timeout=max(self.timeout, 45),
                     user_agent=self.user_agent,
+                )
+            )
+        if "visit_lewes_accommodation" in enabled:
+            plugins.append(
+                VisitLewesAccommodationPlugin(
+                    [str(value) for value in sources.get("visit_lewes_accommodation_index_urls", [])],
+                    timeout=int(sources.get("visit_lewes_accommodation_timeout_seconds", min(self.timeout, 20))),
+                    user_agent=self.user_agent,
+                    max_results=int(sources.get("visit_lewes_accommodation_max_results", 160)),
+                    max_workers=int(sources.get("visit_lewes_accommodation_workers", 4)),
+                    max_pages_per_index=int(sources.get("visit_lewes_accommodation_pages_per_index", 4)),
                 )
             )
         if "lewes_chamber" in enabled:
