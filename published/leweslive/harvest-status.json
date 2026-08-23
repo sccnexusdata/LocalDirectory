@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-22T18:33:05+00:00",
+  "generated_at": "2026-08-23T02:17:40+00:00",
   "site": "leweslive",
   "feed_promoted": false,
   "preserved_previous_feed": true,
@@ -36,7 +36,17 @@
     {
       "source": "osm_overpass",
       "ok": true,
-      "records": 4478
+      "records": 4480
+    },
+    {
+      "source": "owned_accommodation",
+      "ok": true,
+      "records": 1
+    },
+    {
+      "source": "visit_lewes_accommodation",
+      "ok": true,
+      "records": 79
     },
     {
       "source": "lewes_chamber",
@@ -51,7 +61,7 @@
     {
       "source": "json_ld",
       "ok": true,
-      "records": 68
+      "records": 67
     },
     {
       "source": "postcode_enrichment",
@@ -60,16 +70,16 @@
     }
   ],
   "metrics": {
-    "publish_safe_records": 211,
+    "publish_safe_records": 215,
     "category_counts": {
-      "accommodation": 1,
+      "accommodation": 4,
       "beauty_and_hair": 4,
       "builders_general_trades": 1,
       "business_professional": 8,
       "cleaning_windows_property_care": 1,
       "community_charities": 1,
       "education_childcare": 11,
-      "food_and_drink": 98,
+      "food_and_drink": 99,
       "food_producers": 12,
       "garages_vehicle_services": 5,
       "health_care": 10,
@@ -77,8 +87,9 @@
       "shops": 57
     },
     "priority_categories_total": 19,
-    "priority_categories_with_3_records": 8,
+    "priority_categories_with_3_records": 9,
     "priority_categories_meeting_depth": [
+      "accommodation",
       "beauty_and_hair",
       "business_professional",
       "education_childcare",
@@ -102,13 +113,13 @@
       "business_professional",
       "garages_vehicle_services"
     ],
-    "website_coverage": 0.2749,
-    "phone_coverage": 0.1706,
-    "email_coverage": 0.0379,
-    "contact_coverage": 0.2749,
+    "website_coverage": 0.293,
+    "phone_coverage": 0.1721,
+    "email_coverage": 0.0372,
+    "contact_coverage": 0.293,
     "geocoded_coverage": 1.0,
-    "postcode_coverage": 0.9905,
-    "multi_source_coverage": 0.3602,
-    "authoritative_or_owned_coverage": 0.9905
+    "postcode_coverage": 0.9907,
+    "multi_source_coverage": 0.3721,
+    "authoritative_or_owned_coverage": 0.9767
   }
 }
