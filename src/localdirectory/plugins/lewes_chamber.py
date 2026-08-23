@@ -47,9 +47,10 @@ class LewesChamberPlugin:
         self.timeout = timeout
         self.user_agent = user_agent
         self.max_results = max(0, int(max_results))
-        # Chamber has previously rate-limited concurrent detail fetches. Keep this
-        # source deliberately low-volume even if an older config asks for more.
-        self.max_workers = max(1, min(int(max_workers), 2))
+        # Preserve the configured value for runner/API introspection. The harvest
+        # itself is deliberately sequential because the Chamber has rate-limited
+        # concurrent detail requests in production.
+        self.max_workers = max(1, min(int(max_workers), 8))
 
     def _headers(self, browser: bool = False) -> dict[str, str]:
         return {
@@ -104,8 +105,6 @@ class LewesChamberPlugin:
 
         records: list[ListingRecord] = []
         errors: list[str] = []
-        # Sequential fetching is intentional: 101-member harvests previously failed
-        # wholesale when multiple Chamber detail pages were requested concurrently.
         for url in urls:
             result = self._fetch_member(url)
             requests_made += result.requests_made
