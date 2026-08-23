@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-23T02:17:40+00:00",
+  "generated_at": "2026-08-23T05:01:13+00:00",
   "site": "leweslive",
   "feed_promoted": false,
   "preserved_previous_feed": true,
@@ -61,7 +61,7 @@
     {
       "source": "json_ld",
       "ok": true,
-      "records": 67
+      "records": 68
     },
     {
       "source": "postcode_enrichment",
