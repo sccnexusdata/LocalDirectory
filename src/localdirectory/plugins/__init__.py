@@ -6,6 +6,8 @@ from localdirectory.plugins.json_ld import JSONLDPlugin
 from localdirectory.plugins.lewes_chamber import LewesChamberPlugin
 from localdirectory.plugins.manual_csv import ManualCSVPlugin
 from localdirectory.plugins.osm_overpass import OSMOverpassPlugin
+from localdirectory.plugins.owned_accommodation import OwnedAccommodationPlugin
+from localdirectory.plugins.visit_lewes_accommodation import VisitLewesAccommodationPlugin
 
 __all__ = [
     "CQCPlugin",
@@ -16,4 +18,6 @@ __all__ = [
     "LewesChamberPlugin",
     "ManualCSVPlugin",
     "OSMOverpassPlugin",
+    "OwnedAccommodationPlugin",
+    "VisitLewesAccommodationPlugin",
 ]
