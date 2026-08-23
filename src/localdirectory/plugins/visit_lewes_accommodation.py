@@ -25,6 +25,12 @@ CATEGORY_SLUGS = {
     "villages",
     "newhaven",
     "seaford",
+    "pet-friendly",
+    "dog-friendly",
+    "accessible",
+    "family-friendly",
+    "special-offers",
+    "last-minute",
 }
 
 BLOCKED_PROVIDER_HOST_FRAGMENTS = {
@@ -39,6 +45,9 @@ BLOCKED_PROVIDER_HOST_FRAGMENTS = {
     "twitter.",
     "youtube.",
     "google.",
+    "simplevieweurope.com",
+    "simpleviewinc.com",
+    "simpleviewcms.com",
 }
 
 ACCOMMODATION_EVIDENCE = (
@@ -332,6 +341,10 @@ def _parse_detail(html: str, source_url: str) -> ListingRecord | None:
     heading = soup.find("h1")
     name = " ".join(heading.stripped_strings).strip() if heading else ""
     if not name or name.casefold() in {"accommodation", "visit lewes"}:
+        return None
+
+    slug = source_url.rstrip("/").rsplit("/", 1)[-1].casefold()
+    if slug in CATEGORY_SLUGS:
         return None
 
     address, postcode = _text_parent_with_postcode(soup)
