@@ -1,15 +1,15 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-23T06:12:52+00:00",
+  "generated_at": "2026-08-24T07:04:40+00:00",
   "site": "leweslive",
   "feed_promoted": false,
   "preserved_previous_feed": true,
   "coverage_ready": false,
   "failed_critical_sources": [],
   "failed_coverage_checks": [
+    "minimum_publish_safe",
     "minimum_priority_categories_with_3_records",
-    "minimum_trade_categories_with_2_records",
-    "minimum_multi_source_coverage"
+    "minimum_trade_categories_with_2_records"
   ],
   "source_summary": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "source": "lewes_chamber",
-      "ok": false,
-      "records": 0
+      "ok": true,
+      "records": 101
     },
     {
       "source": "companies_house",
@@ -60,7 +60,7 @@
     {
       "source": "json_ld",
       "ok": true,
-      "records": 70
+      "records": 67
     },
     {
       "source": "postcode_enrichment",
@@ -69,14 +69,14 @@
     }
   ],
   "metrics": {
-    "publish_safe_records": 1431,
+    "publish_safe_records": 259,
     "category_counts": {
       "accommodation": 6,
       "beauty_and_hair": 4,
       "builders_general_trades": 1,
-      "business_professional": 8,
+      "business_professional": 7,
       "cleaning_windows_property_care": 1,
-      "community_charities": 1216,
+      "community_charities": 45,
       "education_childcare": 10,
       "food_and_drink": 99,
       "food_producers": 12,
@@ -113,13 +113,13 @@
       "business_professional",
       "garages_vehicle_services"
     ],
-    "website_coverage": 0.624,
-    "phone_coverage": 0.0468,
-    "email_coverage": 0.0091,
-    "contact_coverage": 0.6254,
+    "website_coverage": 0.4054,
+    "phone_coverage": 0.2548,
+    "email_coverage": 0.0463,
+    "contact_coverage": 0.4131,
     "geocoded_coverage": 1.0,
-    "postcode_coverage": 0.9986,
-    "multi_source_coverage": 0.0881,
-    "authoritative_or_owned_coverage": 0.9937
+    "postcode_coverage": 0.9923,
+    "multi_source_coverage": 0.4865,
+    "authoritative_or_owned_coverage": 0.9653
   }
 }
