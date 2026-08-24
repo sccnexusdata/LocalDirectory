@@ -1,14 +1,15 @@
 {
   "schema_version": "1.0",
   "purpose": "meeting_preview_only",
-  "generated_at": "2026-08-24T11:56:56.113921+00:00",
+  "generated_at": "2026-08-24T12:42:14.360710+00:00",
   "production_promoted": false,
   "coverage_ready": false,
   "metrics": {
-    "publish_safe_records": 258,
+    "publish_safe_records": 259,
     "category_counts": {
       "accommodation": 6,
       "beauty_and_hair": 4,
+      "builders_general_trades": 1,
       "business_professional": 7,
       "cleaning_windows_property_care": 1,
       "community_charities": 45,
@@ -35,7 +36,6 @@
       "shops"
     ],
     "missing_priority_categories": [
-      "builders_general_trades",
       "carpenters_joiners",
       "electricians",
       "gardeners_landscaping_trees",
@@ -49,14 +49,14 @@
       "business_professional",
       "garages_vehicle_services"
     ],
-    "website_coverage": 0.4031,
-    "phone_coverage": 0.2519,
-    "email_coverage": 0.0426,
-    "contact_coverage": 0.4109,
+    "website_coverage": 0.4054,
+    "phone_coverage": 0.2548,
+    "email_coverage": 0.0463,
+    "contact_coverage": 0.4131,
     "geocoded_coverage": 1.0,
-    "postcode_coverage": 0.9922,
-    "multi_source_coverage": 0.4845,
-    "authoritative_or_owned_coverage": 0.9651
+    "postcode_coverage": 0.9923,
+    "multi_source_coverage": 0.4865,
+    "authoritative_or_owned_coverage": 0.9653
   },
   "note": "Isolated publish-safe candidate for staging review. Production promotion rules are unchanged."
 }

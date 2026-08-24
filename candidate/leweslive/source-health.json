@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-24T11:56:55+00:00",
+  "generated_at": "2026-08-24T12:42:13+00:00",
   "offline": false,
   "sources": [
     {
@@ -33,9 +33,9 @@
     {
       "source": "osm_overpass",
       "ok": true,
-      "message": "Harvested 4480 OpenStreetMap candidates via https://overpass-api.de/api/interpreter after 2 endpoint attempts",
+      "message": "Harvested 4480 OpenStreetMap candidates via https://overpass-api.de/api/interpreter",
       "records": 4480,
-      "requests_made": 2
+      "requests_made": 1
     },
     {
       "source": "owned_accommodation",
@@ -56,7 +56,7 @@
       "ok": true,
       "message": "Harvested 101 Lewes Chamber member candidates from 101 member URLs; 101 retained as index-only review candidates; 101 detail request/parser failure(s)",
       "records": 101,
-      "requests_made": 103
+      "requests_made": 102
     },
     {
       "source": "companies_house",
@@ -68,8 +68,8 @@
     {
       "source": "json_ld",
       "ok": true,
-      "message": "Queued 160 category-balanced websites. Harvested 64 JSON-LD records from 124/160 websites; 36 request failure(s): https://aroominthegarden.co.uk: ConnectTimeout; https://www.lockstockandbarrel-locksmith.co.uk: ConnectionError; https://www.timpson.co.uk/stores/brighton-north-street: HTTPError; https://www.timpson.co.uk/stores/burgess-hill-tesco: HTTPError; https://www.timpson.co.uk/stores/haywards-heath-south-road: HTTPError; https://www.timpson.co.uk/stores/hove-george-street: HTTPError; https://www.timpson.co.uk/stores/newhaven-sainsburys: HTTPError; https://www.itimber.co.uk: ConnectTimeout; https://www.brightonlaunderettes.co.uk/seven-dials: ConnectionError; http://www.auto-bodycarecentre.co.uk: ConnectionError; http://www.johnsonsarc.co.uk: HTTPError; http://www.aboutletting.co.uk: ConnectTimeout",
-      "records": 64,
+      "message": "Queued 160 category-balanced websites. Harvested 67 JSON-LD records from 128/160 websites; 32 request failure(s): https://www.lockstockandbarrel-locksmith.co.uk: ConnectionError; https://www.timpson.co.uk/stores/brighton-north-street: HTTPError; https://www.timpson.co.uk/stores/burgess-hill-tesco: HTTPError; https://www.timpson.co.uk/stores/haywards-heath-south-road: HTTPError; https://www.timpson.co.uk/stores/hove-george-street: HTTPError; https://www.timpson.co.uk/stores/newhaven-sainsburys: HTTPError; https://www.itimber.co.uk: ConnectTimeout; https://www.brightonlaunderettes.co.uk/seven-dials: SSLError; http://www.auto-bodycarecentre.co.uk: ConnectionError; http://www.johnsonsarc.co.uk: HTTPError; http://www.aboutletting.co.uk: ConnectTimeout; https://www.brandvaughan.co.uk/agencies/kemp-town: HTTPError",
+      "records": 67,
       "requests_made": 160
     },
     {
