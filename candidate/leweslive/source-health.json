@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-08-24T11:56:55+00:00",
+  "offline": false,
+  "sources": [
+    {
+      "source": "manual_csv",
+      "ok": true,
+      "message": "Loaded 6 manual rows",
+      "records": 6,
+      "requests_made": 0
+    },
+    {
+      "source": "fhrs",
+      "ok": true,
+      "message": "Harvested 184 FHRS establishments",
+      "records": 184,
+      "requests_made": 1
+    },
+    {
+      "source": "cqc",
+      "ok": false,
+      "message": "ValueError: CQC directory header row was not found; preview=\"CQC Locations data /  /  /  /  /  |  /  /  /  /  /  | This data was produced on 19 August 2026 /  /  /  /  /  |  /  /  /  /  /  | Name / Also known as / Address / Postcode / Phone number / Service's website (if available)\"",
+      "records": 0,
+      "requests_made": 0
+    },
+    {
+      "source": "charity_commission",
+      "ok": true,
+      "message": "Harvested 1233 registered local charities from 1543 postcode-prefiltered candidates; resolved 1137/1141 postcodes",
+      "records": 1233,
+      "requests_made": 14
+    },
+    {
+      "source": "osm_overpass",
+      "ok": true,
+      "message": "Harvested 4480 OpenStreetMap candidates via https://overpass-api.de/api/interpreter after 2 endpoint attempts",
+      "records": 4480,
+      "requests_made": 2
+    },
+    {
+      "source": "owned_accommodation",
+      "ok": true,
+      "message": "Verified 2/2 provider-owned accommodation seed(s); 0 failure(s)",
+      "records": 2,
+      "requests_made": 2
+    },
+    {
+      "source": "visit_lewes_accommodation",
+      "ok": true,
+      "message": "Harvested 77 explicit accommodation records from 79 Visit Lewes detail pages; 0 provider-owned corroboration(s); 2 detail failure(s); 0 index failure(s)",
+      "records": 77,
+      "requests_made": 92
+    },
+    {
+      "source": "lewes_chamber",
+      "ok": true,
+      "message": "Harvested 101 Lewes Chamber member candidates from 101 member URLs; 101 retained as index-only review candidates; 101 detail request/parser failure(s)",
+      "records": 101,
+      "requests_made": 103
+    },
+    {
+      "source": "companies_house",
+      "ok": true,
+      "message": "Skipped: COMPANIES_HOUSE_API_KEY not configured",
+      "records": 0,
+      "requests_made": 0
+    },
+    {
+      "source": "json_ld",
+      "ok": true,
+      "message": "Queued 160 category-balanced websites. Harvested 64 JSON-LD records from 124/160 websites; 36 request failure(s): https://aroominthegarden.co.uk: ConnectTimeout; https://www.lockstockandbarrel-locksmith.co.uk: ConnectionError; https://www.timpson.co.uk/stores/brighton-north-street: HTTPError; https://www.timpson.co.uk/stores/burgess-hill-tesco: HTTPError; https://www.timpson.co.uk/stores/haywards-heath-south-road: HTTPError; https://www.timpson.co.uk/stores/hove-george-street: HTTPError; https://www.timpson.co.uk/stores/newhaven-sainsburys: HTTPError; https://www.itimber.co.uk: ConnectTimeout; https://www.brightonlaunderettes.co.uk/seven-dials: ConnectionError; http://www.auto-bodycarecentre.co.uk: ConnectionError; http://www.johnsonsarc.co.uk: HTTPError; http://www.aboutletting.co.uk: ConnectTimeout",
+      "records": 64,
+      "requests_made": 160
+    },
+    {
+      "source": "postcode_enrichment",
+      "ok": true,
+      "message": "Resolved 937/939 postcodes; enriched 1245 records",
+      "records": 0,
+      "requests_made": 10
+    }
+  ]
+}

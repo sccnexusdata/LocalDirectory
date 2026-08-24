@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "purpose": "meeting_preview_only",
+  "generated_at": "2026-08-24T11:56:56.113921+00:00",
+  "production_promoted": false,
+  "coverage_ready": false,
+  "metrics": {
+    "publish_safe_records": 258,
+    "category_counts": {
+      "accommodation": 6,
+      "beauty_and_hair": 4,
+      "business_professional": 7,
+      "cleaning_windows_property_care": 1,
+      "community_charities": 45,
+      "education_childcare": 10,
+      "food_and_drink": 99,
+      "food_producers": 12,
+      "garages_vehicle_services": 5,
+      "health_care": 10,
+      "public_services": 2,
+      "shops": 57
+    },
+    "priority_categories_total": 19,
+    "priority_categories_with_3_records": 10,
+    "priority_categories_meeting_depth": [
+      "accommodation",
+      "beauty_and_hair",
+      "business_professional",
+      "community_charities",
+      "education_childcare",
+      "food_and_drink",
+      "food_producers",
+      "garages_vehicle_services",
+      "health_care",
+      "shops"
+    ],
+    "missing_priority_categories": [
+      "builders_general_trades",
+      "carpenters_joiners",
+      "electricians",
+      "gardeners_landscaping_trees",
+      "painters_decorators",
+      "plumbers_heating",
+      "roofing_chimneys_guttering"
+    ],
+    "trade_categories_total": 10,
+    "trade_categories_with_2_records": 2,
+    "trade_categories_meeting_depth": [
+      "business_professional",
+      "garages_vehicle_services"
+    ],
+    "website_coverage": 0.4031,
+    "phone_coverage": 0.2519,
+    "email_coverage": 0.0426,
+    "contact_coverage": 0.4109,
+    "geocoded_coverage": 1.0,
+    "postcode_coverage": 0.9922,
+    "multi_source_coverage": 0.4845,
+    "authoritative_or_owned_coverage": 0.9651
+  },
+  "note": "Isolated publish-safe candidate for staging review. Production promotion rules are unchanged."
+}
