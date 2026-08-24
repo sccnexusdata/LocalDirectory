@@ -1,0 +1,114 @@
+name: Meeting Preview Directory Snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: "Configuration path"
+        required: false
+        default: "config/lewes.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/meeting_preview_snapshot.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: local-directory-meeting-preview
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  CONFIG_PATH: ${{ inputs.config_path || 'config/lewes.yaml' }}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Tests
+        run: pytest -q
+      - name: Run bounded harvest
+        env:
+          COMPANIES_HOUSE_API_KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY }}
+          LOCALDIRECTORY_USER_AGENT: "LocalDirectory/0.1 (+https://github.com/sccnexusdata/LocalDirectory)"
+        run: python run.py run --config "$CONFIG_PATH"
+      - name: Locate and validate candidate
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          QUALITY="$(find exports -name quality-report.json -print | head -n 1)"
+          [ -n "$QUALITY" ] || { echo "No quality-report.json generated"; exit 1; }
+          ROOT="$(dirname "$QUALITY")"
+          SITE_SLUG="$(python - "$CONFIG_PATH" <<'PY'
+          import sys, yaml
+          config = yaml.safe_load(open(sys.argv[1], encoding='utf-8')) or {}
+          print(((config.get('outputs') or {}).get('site_bundle') or {}).get('slug') or '')
+          PY
+          )"
+          [ -n "$SITE_SLUG" ] || { echo "Missing site bundle slug"; exit 1; }
+          python scripts/validate_public_bundle.py "$ROOT/public"
+          python - "$ROOT/$SITE_SLUG/directory.v1.json" "$ROOT/$SITE_SLUG/manifest.v1.json" <<'PY'
+          import json, sys
+          payload = json.load(open(sys.argv[1], encoding='utf-8'))
+          manifest = json.load(open(sys.argv[2], encoding='utf-8'))
+          assert payload.get('schemaVersion') == '1.0'
+          assert isinstance(payload.get('listings'), list)
+          assert int(manifest.get('record_count', -1)) == len(payload['listings'])
+          print(f"Meeting-preview candidate contains {len(payload['listings'])} publish-safe records")
+          PY
+          echo "root=$ROOT" >> "$GITHUB_OUTPUT"
+          echo "site_slug=$SITE_SLUG" >> "$GITHUB_OUTPUT"
+      - name: Stage isolated meeting-preview candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${{ steps.candidate.outputs.root }}"
+          SITE_SLUG="${{ steps.candidate.outputs.site_slug }}"
+          DEST="candidate/$SITE_SLUG"
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp "$ROOT/$SITE_SLUG/directory.v1.json" "$DEST/directory.v1.json"
+          cp "$ROOT/$SITE_SLUG/directory.v1.js" "$DEST/directory.v1.js"
+          cp "$ROOT/$SITE_SLUG/manifest.v1.json" "$DEST/manifest.v1.json"
+          cp "$ROOT/coverage-report.json" "$DEST/coverage-report.json"
+          cp "$ROOT/source-health.json" "$DEST/source-health.json"
+          python - "$DEST/coverage-report.json" "$DEST/meeting-preview-status.json" <<'PY'
+          import datetime, json, pathlib, sys
+          coverage = json.load(open(sys.argv[1], encoding='utf-8'))
+          status = {
+              'schema_version': '1.0',
+              'purpose': 'meeting_preview_only',
+              'generated_at': datetime.datetime.now(datetime.UTC).isoformat(),
+              'production_promoted': False,
+              'coverage_ready': bool(coverage.get('ready')),
+              'metrics': coverage.get('metrics', {}),
+              'note': 'Isolated publish-safe candidate for staging review. Production promotion rules are unchanged.'
+          }
+          pathlib.Path(sys.argv[2]).write_text(json.dumps(status, indent=2), encoding='utf-8')
+          PY
+      - name: Commit isolated candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE_SLUG="${{ steps.candidate.outputs.site_slug }}"
+          if [ -z "$(git status --porcelain -- "candidate/$SITE_SLUG")" ]; then
+            echo "Meeting-preview candidate unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "candidate/$SITE_SLUG"
+          git commit -m "data: refresh isolated $SITE_SLUG meeting-preview candidate"
+          git push
