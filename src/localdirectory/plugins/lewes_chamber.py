@@ -29,8 +29,20 @@ class _MemberResult:
     requests_made: int = 0
 
 
+@dataclass(slots=True)
+class _IndexCandidate:
+    url: str
+    name: str
+    sector: str = ""
+
+
 class LewesChamberPlugin:
-    """Discover Lewes Chamber members without ingesting Chamber phone/email data."""
+    """Discover Lewes Chamber members without ingesting Chamber phone/email data.
+
+    Detail pages are preferred. If GitHub Actions receives a blank/blocked detail
+    page, visible directory-index evidence is retained as a review-only candidate
+    instead of manufacturing address, website or contact fields from the URL slug.
+    """
 
     name = "lewes_chamber"
 
@@ -47,9 +59,6 @@ class LewesChamberPlugin:
         self.timeout = timeout
         self.user_agent = user_agent
         self.max_results = max(0, int(max_results))
-        # Preserve the configured value for runner/API introspection. The harvest
-        # itself is deliberately sequential because the Chamber has rate-limited
-        # concurrent detail requests in production.
         self.max_workers = max(1, min(int(max_workers), 8))
 
     def _headers(self, browser: bool = False) -> dict[str, str]:
@@ -89,7 +98,8 @@ class LewesChamberPlugin:
                 requests_made=requests_made,
             )
 
-        urls = _member_urls(response.text, response.url)
+        index_candidates = {candidate.url: candidate for candidate in _index_candidates(response.text, response.url)}
+        urls = sorted(index_candidates)
         if not urls:
             sitemap_urls, sitemap_requests = self._discover_from_sitemaps(response.url)
             urls = sitemap_urls
@@ -105,20 +115,26 @@ class LewesChamberPlugin:
 
         records: list[ListingRecord] = []
         errors: list[str] = []
+        index_fallbacks = 0
         for url in urls:
             result = self._fetch_member(url)
             requests_made += result.requests_made
             if result.record:
                 records.append(result.record)
-            if result.error:
-                errors.append(result.error)
+            else:
+                candidate = index_candidates.get(url)
+                if candidate and candidate.name:
+                    records.append(_record_from_index_candidate(candidate))
+                    index_fallbacks += 1
+                if result.error:
+                    errors.append(result.error)
             time.sleep(0.03)
 
-        message = f"Harvested {len(records)} Lewes Chamber members from {len(urls)} detail pages"
+        message = f"Harvested {len(records)} Lewes Chamber member candidates from {len(urls)} member URLs"
+        if index_fallbacks:
+            message += f"; {index_fallbacks} retained as index-only review candidates"
         if errors:
             message += f"; {len(errors)} detail request/parser failure(s)"
-        if errors and not records:
-            message += f"; first failure: {errors[0]}"
         return HarvestResult(self.name, records, bool(records), message, requests_made)
 
     def _fetch_member(self, url: str) -> _MemberResult:
@@ -182,17 +198,64 @@ def _is_member_detail_url(value: str) -> bool:
     return bool(suffix and "/" not in suffix)
 
 
-def _member_urls(html: str, base_url: str) -> list[str]:
+def _index_candidates(html: str, base_url: str) -> list[_IndexCandidate]:
     soup = BeautifulSoup(html, "html.parser")
     base_host = urlparse(base_url).netloc.casefold()
-    urls: set[str] = set()
+    found: dict[str, _IndexCandidate] = {}
     for anchor in soup.find_all("a", href=True):
         absolute = urljoin(base_url, str(anchor.get("href") or ""))
-        if urlparse(absolute).netloc.casefold() != base_host:
+        if urlparse(absolute).netloc.casefold() != base_host or not _is_member_detail_url(absolute):
             continue
-        if _is_member_detail_url(absolute):
-            urls.add(_canonical_url(absolute))
-    return sorted(urls)
+        url = _canonical_url(absolute)
+        name = anchor.get_text(" ", strip=True)
+        if not name or name.casefold() in {"read more", "more", "view", "details"}:
+            image = anchor.find("img", alt=True)
+            name = str(image.get("alt") or "").strip() if image else ""
+        if not name:
+            continue
+        sector = ""
+        container = anchor.find_parent(["article", "li", "div"])
+        if container:
+            attrs = " ".join(
+                str(value)
+                for key, value in container.attrs.items()
+                if "categor" in key.casefold() or "sector" in key.casefold() or key.casefold() == "class"
+            )
+            text = container.get_text(" ", strip=True)
+            match = re.search(r"\bSector\s*:\s*([^|•\n]+)", text, flags=re.IGNORECASE)
+            sector = (match.group(1).strip() if match else attrs.strip())[:160]
+        found[url] = _IndexCandidate(url=url, name=name[:240], sector=sector)
+    return sorted(found.values(), key=lambda item: item.url)
+
+
+def _member_urls(html: str, base_url: str) -> list[str]:
+    return [candidate.url for candidate in _index_candidates(html, base_url)]
+
+
+def _record_from_index_candidate(candidate: _IndexCandidate) -> ListingRecord:
+    category = category_from_terms(candidate.sector) if candidate.sector else "other"
+    flags = ["chamber_index_only_requires_owned_or_independent_corroboration"]
+    return ListingRecord(
+        name=candidate.name,
+        listing_type="service_provider",
+        primary_category=category,
+        description=(
+            "Current Lewes Chamber directory membership candidate. The member detail page was not readable "
+            "to the automated harvest, so address, website and contact details are deliberately not inferred."
+        ),
+        service_area=["Lewes"],
+        sources=[
+            SourceRef(
+                "Lewes Chamber of Commerce",
+                "trade_association_directory",
+                "C",
+                source_id=candidate.url,
+                source_url=candidate.url,
+            )
+        ],
+        review_required=True,
+        quality_flags=flags,
+    )
 
 
 def _parse_member(html: str, source_url: str) -> ListingRecord | None:
