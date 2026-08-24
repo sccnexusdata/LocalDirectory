@@ -70,3 +70,26 @@ def test_parse_cqc_utf16_tab_file_with_compact_headers():
     assert len(records) == 1
     assert records[0].name == "Lewes Care Centre"
     assert records[0].regulator_ids["cqc"] == "lew4"
+
+
+def test_parse_cqc_migration_file_with_long_metadata_preamble_and_identifier_alias():
+    preamble = ["CQC Locations data,,,", "This data was produced on 19 August 2026,,,"]
+    preamble.extend(f"metadata line {index},,," for index in range(80))
+    text = "\n".join(
+        [
+            *preamble,
+            "Location Identifier,Service Name,Postal Code,Location Type,Location Latitude,Location Longitude,Web Address,Telephone Number",
+            "lew5,Lewes Supported Living,BN7 2AA,Supported living,50.8739,0.0088,https://care.example,01273 000005",
+        ]
+    )
+    records = _parse_directory_csv(
+        text.encode("utf-8"),
+        centre_latitude=50.8739,
+        centre_longitude=0.0088,
+        radius_km=16.0934,
+        postcode_area="BN7",
+    )
+    assert len(records) == 1
+    assert records[0].name == "Lewes Supported Living"
+    assert records[0].listing_type == "service_provider"
+    assert records[0].regulator_ids["cqc"] == "lew5"
