@@ -138,7 +138,7 @@ def _parse_directory_csv(
     rows = list(csv.reader(io.StringIO(text), dialect=dialect))
     header_index = _header_index(rows)
     if header_index is None:
-        preview = " | ".join(" / ".join(row[:4]) for row in rows[:3])[:400]
+        preview = " | ".join(" / ".join(row[:6]) for row in rows[:5])[:600]
         raise ValueError(f"CQC directory header row was not found; preview={preview!r}")
 
     header = rows[header_index]
@@ -170,9 +170,27 @@ def _rows_to_csv(rows: list[list[str]], delimiter: str = ",") -> str:
 
 
 def _header_index(rows: list[list[str]]) -> int | None:
-    for index, row in enumerate(rows[:50]):
-        normalised = {_normalise_header(cell) for cell in row}
-        if "locationid" in normalised and "locationname" in normalised:
+    id_aliases = {
+        "locationid",
+        "cqclocationid",
+        "locationidentifier",
+        "cqclocationidentifier",
+    }
+    name_aliases = {"locationname", "servicename", "name"}
+    postcode_aliases = {"locationpostalcode", "locationpostcode", "postcode", "postalcode"}
+    for index, row in enumerate(rows[:500]):
+        normalised = {_normalise_header(cell) for cell in row if str(cell).strip()}
+        if normalised & id_aliases and normalised & name_aliases:
+            return index
+        # Migration-safe fallback: a wide row containing a location/service name,
+        # postcode and several recognisable location fields is much more likely to
+        # be the schema row than metadata prose above it.
+        locationish = sum(
+            1
+            for value in normalised
+            if value.startswith("location") or value in {"providerid", "providername", "website", "telephone"}
+        )
+        if normalised & name_aliases and normalised & postcode_aliases and locationish >= 4:
             return index
     return None
 
@@ -185,9 +203,9 @@ def _record_from_row(
     radius_km: float,
     postcode_area: str,
 ) -> ListingRecord | None:
-    name = _field(row, "Location Name", "Name")
-    location_id = _field(row, "Location ID", "CQC Location ID")
-    postcode = normalise_postcode(_field(row, "Location Postal Code", "Postcode", "Location Postcode"))
+    name = _field(row, "Location Name", "Service Name", "Name")
+    location_id = _field(row, "Location ID", "CQC Location ID", "Location Identifier", "CQC Location Identifier")
+    postcode = normalise_postcode(_field(row, "Location Postal Code", "Postcode", "Location Postcode", "Postal Code"))
     if not name or not location_id:
         return None
 
@@ -201,16 +219,16 @@ def _record_from_row(
     service_text = " ".join(
         value
         for value in [
-            _field(row, "Location Type/Sector", "Location Type"),
+            _field(row, "Location Type/Sector", "Location Type", "Sector"),
             _field(row, "Location Primary Inspection Category", "Primary Inspection Category"),
-            _field(row, "Service Types", "Location Service Types"),
+            _field(row, "Service Types", "Location Service Types", "Service Type"),
         ]
         if value
     ).strip()
     remote_service = _is_remote_service(service_text)
     address = _address(row)
-    website = _field(row, "Location Web Address", "Location Website", "Website")
-    phone = _field(row, "Location Telephone Number", "Telephone", "Phone")
+    website = _field(row, "Location Web Address", "Location Website", "Website", "Web Address")
+    phone = _field(row, "Location Telephone Number", "Telephone", "Phone", "Telephone Number")
     provider_company = re.sub(r"\s+", "", _field(row, "Provider Companies House Number"))
     provider_charity = re.sub(r"\s+", "", _field(row, "Provider Charity Number"))
     source_url = f"https://www.cqc.org.uk/location/{location_id}"
@@ -271,11 +289,11 @@ def _float(value: str) -> float | None:
 
 def _address(row: dict[str, str]) -> str:
     parts = [
-        _field(row, "Location Street Address", "Street Address"),
+        _field(row, "Location Street Address", "Street Address", "Address Line 1"),
         _field(row, "Location Address Line 2", "Address Line 2"),
         _field(row, "Location City", "City", "Town"),
         _field(row, "Location County", "County"),
-        _field(row, "Location Postal Code", "Postcode", "Location Postcode"),
+        _field(row, "Location Postal Code", "Postcode", "Location Postcode", "Postal Code"),
     ]
     seen: set[str] = set()
     result: list[str] = []

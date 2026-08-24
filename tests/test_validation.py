@@ -33,3 +33,37 @@ def test_companies_house_only_never_publishes():
     validate_records([record], LOCATION, POLICY)
     assert not record.publish_safe
     assert "registered_company_requires_trading_corroboration" in record.quality_flags
+
+
+def test_charity_commission_contact_postcode_alone_is_review_only():
+    record = ListingRecord(
+        name="Example Charity",
+        listing_type="service_provider",
+        primary_category="community_charities",
+        postcode="BN7 2AA",
+        service_area=["Lewes"],
+        sources=[SourceRef("Charity Commission for England and Wales", "official_register", "A")],
+        address_public=False,
+    )
+    validate_records([record], LOCATION, POLICY)
+    assert not record.publish_safe
+    assert record.status == "review"
+    assert "charity_contact_locality_requires_operational_corroboration" in record.quality_flags
+
+
+def test_charity_commission_record_can_publish_when_locality_is_corroborated():
+    record = ListingRecord(
+        name="Example Charity",
+        listing_type="service_provider",
+        primary_category="community_charities",
+        postcode="BN7 2AA",
+        website="https://example.org",
+        service_area=["Lewes"],
+        sources=[
+            SourceRef("Charity Commission for England and Wales", "official_register", "A"),
+            SourceRef("Example Charity", "organisation_owned_website", "B"),
+        ],
+        address_public=False,
+    )
+    validate_records([record], LOCATION, POLICY)
+    assert record.publish_safe
