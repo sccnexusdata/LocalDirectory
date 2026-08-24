@@ -42,12 +42,20 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
         independent_sources = len(source_names)
         official = "A" in source_classes
         owned = "B" in source_classes
+        charity_commission_only = (
+            independent_sources == 1
+            and any("charity commission" in name for name in source_names)
+        )
 
         if independent_sources == 1:
             flags.add("single_source_only")
             if source_classes == {"D"}:
                 flags.add("needs_independent_corroboration")
         elif independent_sources < min_sources:
+            flags.add("needs_independent_corroboration")
+
+        if charity_commission_only:
+            flags.add("charity_contact_locality_requires_operational_corroboration")
             flags.add("needs_independent_corroboration")
 
         core_ok = bool(record.name and record.primary_category != "other" and (record.postcode or is_local_place or service_match))
@@ -65,6 +73,7 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
         publish = bool(
             core_ok
             and not blocking_conflict
+            and not charity_commission_only
             and (
                 record.manual_verified
                 or (allow_class_a_single and official and record.listing_type != "registered_company")
@@ -92,7 +101,7 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
             score += 0.04
         if record.postcode:
             score += 0.05
-        if blocking_conflict:
+        if blocking_conflict or charity_commission_only:
             score = min(score, 0.49)
         record.confidence_score = round(min(score, 0.99), 2)
         record.publish_safe = publish
