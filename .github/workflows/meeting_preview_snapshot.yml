@@ -1,3 +1,4 @@
+# Meeting-preview snapshot workflow. Production promotion rules remain unchanged.
 name: Meeting Preview Directory Snapshot
 
 on:
