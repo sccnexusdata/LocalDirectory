@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-24T07:04:40+00:00",
+  "generated_at": "2026-08-24T07:55:04+00:00",
   "site": "leweslive",
   "feed_promoted": false,
   "preserved_previous_feed": true,
@@ -60,7 +60,7 @@
     {
       "source": "json_ld",
       "ok": true,
-      "records": 67
+      "records": 65
     },
     {
       "source": "postcode_enrichment",
@@ -69,7 +69,7 @@
     }
   ],
   "metrics": {
-    "publish_safe_records": 259,
+    "publish_safe_records": 258,
     "category_counts": {
       "accommodation": 6,
       "beauty_and_hair": 4,
@@ -80,7 +80,7 @@
       "education_childcare": 10,
       "food_and_drink": 99,
       "food_producers": 12,
-      "garages_vehicle_services": 5,
+      "garages_vehicle_services": 4,
       "health_care": 10,
       "public_services": 2,
       "shops": 57
@@ -113,13 +113,13 @@
       "business_professional",
       "garages_vehicle_services"
     ],
-    "website_coverage": 0.4054,
-    "phone_coverage": 0.2548,
-    "email_coverage": 0.0463,
-    "contact_coverage": 0.4131,
+    "website_coverage": 0.4031,
+    "phone_coverage": 0.2519,
+    "email_coverage": 0.0465,
+    "contact_coverage": 0.4109,
     "geocoded_coverage": 1.0,
-    "postcode_coverage": 0.9923,
-    "multi_source_coverage": 0.4865,
-    "authoritative_or_owned_coverage": 0.9653
+    "postcode_coverage": 0.9922,
+    "multi_source_coverage": 0.4845,
+    "authoritative_or_owned_coverage": 0.9651
   }
 }
