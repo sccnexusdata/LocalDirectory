@@ -1,4 +1,9 @@
-from localdirectory.plugins.lewes_chamber import _member_urls, _parse_member
+from localdirectory.plugins.lewes_chamber import (
+    _index_candidates,
+    _member_urls,
+    _parse_member,
+    _record_from_index_candidate,
+)
 
 
 def test_member_urls_accept_current_directory_detail_pages():
@@ -51,3 +56,24 @@ def test_member_without_address_remains_service_provider():
     assert record is not None
     assert record.listing_type == "service_provider"
     assert record.service_area == ["Lewes"]
+
+
+def test_index_candidate_preserves_visible_name_without_inventing_detail_fields():
+    html = """
+    <div class="member-card category-garden-services">
+      <a href="/members-directory/arcadia-garden-design/">Arcadia Garden Design</a>
+    </div>
+    """
+    candidates = _index_candidates(html, "https://www.leweschamber.co.uk/members-directory/")
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.name == "Arcadia Garden Design"
+    record = _record_from_index_candidate(candidate)
+    assert record.name == "Arcadia Garden Design"
+    assert record.website == ""
+    assert record.address == ""
+    assert record.phone == ""
+    assert record.email == ""
+    assert record.listing_type == "service_provider"
+    assert record.review_required is True
+    assert "chamber_index_only_requires_owned_or_independent_corroboration" in record.quality_flags
