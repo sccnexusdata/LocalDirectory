@@ -1,16 +1,12 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-24T07:55:04+00:00",
+  "generated_at": "2026-08-25T06:46:04+00:00",
   "site": "leweslive",
-  "feed_promoted": false,
-  "preserved_previous_feed": true,
-  "coverage_ready": false,
+  "feed_promoted": true,
+  "preserved_previous_feed": false,
+  "coverage_ready": true,
   "failed_critical_sources": [],
-  "failed_coverage_checks": [
-    "minimum_publish_safe",
-    "minimum_priority_categories_with_3_records",
-    "minimum_trade_categories_with_2_records"
-  ],
+  "failed_coverage_checks": [],
   "source_summary": [
     {
       "source": "manual_csv",
@@ -30,7 +26,7 @@
     {
       "source": "charity_commission",
       "ok": true,
-      "records": 1233
+      "records": 1232
     },
     {
       "source": "osm_overpass",
@@ -60,7 +56,7 @@
     {
       "source": "json_ld",
       "ok": true,
-      "records": 65
+      "records": 64
     },
     {
       "source": "postcode_enrichment",
@@ -73,14 +69,13 @@
     "category_counts": {
       "accommodation": 6,
       "beauty_and_hair": 4,
-      "builders_general_trades": 1,
       "business_professional": 7,
       "cleaning_windows_property_care": 1,
       "community_charities": 45,
       "education_childcare": 10,
       "food_and_drink": 99,
       "food_producers": 12,
-      "garages_vehicle_services": 4,
+      "garages_vehicle_services": 5,
       "health_care": 10,
       "public_services": 2,
       "shops": 57
@@ -100,6 +95,7 @@
       "shops"
     ],
     "missing_priority_categories": [
+      "builders_general_trades",
       "carpenters_joiners",
       "electricians",
       "gardeners_landscaping_trees",
@@ -115,7 +111,7 @@
     ],
     "website_coverage": 0.4031,
     "phone_coverage": 0.2519,
-    "email_coverage": 0.0465,
+    "email_coverage": 0.0426,
     "contact_coverage": 0.4109,
     "geocoded_coverage": 1.0,
     "postcode_coverage": 0.9922,
