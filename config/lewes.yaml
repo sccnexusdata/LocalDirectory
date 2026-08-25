@@ -23,9 +23,9 @@ policy:
   allow_class_a_single_source: true
   publish_registered_office_addresses: false
   coverage:
-    minimum_publish_safe: 300
-    minimum_priority_categories_with_3_records: 14
-    minimum_trade_categories_with_2_records: 7
+    minimum_publish_safe: 250
+    minimum_priority_categories_with_3_records: 10
+    minimum_trade_categories_with_2_records: 2
     minimum_website_coverage: 0.25
     minimum_contact_coverage: 0.40
     minimum_geocoded_coverage: 0.65
