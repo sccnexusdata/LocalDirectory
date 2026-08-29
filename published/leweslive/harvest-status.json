@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-29T08:21:52+00:00",
+  "generated_at": "2026-08-29T15:50:41+00:00",
   "site": "leweslive",
   "feed_promoted": true,
   "preserved_previous_feed": false,
@@ -31,7 +31,7 @@
     {
       "source": "osm_overpass",
       "ok": true,
-      "records": 4482
+      "records": 4483
     },
     {
       "source": "owned_accommodation",
@@ -56,7 +56,7 @@
     {
       "source": "json_ld",
       "ok": true,
-      "records": 58
+      "records": 67
     },
     {
       "source": "postcode_enrichment",
@@ -65,11 +65,13 @@
     }
   ],
   "metrics": {
-    "publish_safe_records": 257,
+    "publish_safe_records": 260,
     "category_counts": {
       "accommodation": 6,
       "beauty_and_hair": 4,
-      "business_professional": 6,
+      "builders_general_trades": 1,
+      "business_professional": 7,
+      "cleaning_windows_property_care": 1,
       "community_charities": 45,
       "education_childcare": 10,
       "food_and_drink": 100,
@@ -94,9 +96,7 @@
       "shops"
     ],
     "missing_priority_categories": [
-      "builders_general_trades",
       "carpenters_joiners",
-      "cleaning_windows_property_care",
       "electricians",
       "gardeners_landscaping_trees",
       "painters_decorators",
@@ -109,13 +109,13 @@
       "business_professional",
       "garages_vehicle_services"
     ],
-    "website_coverage": 0.3969,
-    "phone_coverage": 0.2451,
-    "email_coverage": 0.0389,
-    "contact_coverage": 0.4047,
+    "website_coverage": 0.4038,
+    "phone_coverage": 0.2538,
+    "email_coverage": 0.0462,
+    "contact_coverage": 0.4115,
     "geocoded_coverage": 1.0,
-    "postcode_coverage": 0.9922,
-    "multi_source_coverage": 0.4825,
-    "authoritative_or_owned_coverage": 0.965
+    "postcode_coverage": 0.9923,
+    "multi_source_coverage": 0.4846,
+    "authoritative_or_owned_coverage": 0.9654
   }
 }
