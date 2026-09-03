@@ -67,3 +67,51 @@ def test_charity_commission_record_can_publish_when_locality_is_corroborated():
     )
     validate_records([record], LOCATION, POLICY)
     assert record.publish_safe
+
+
+def test_discovery_only_publisher_never_publishes_even_if_manually_marked_verified():
+    record = ListingRecord(
+        name="Example Advertiser",
+        primary_category="shops",
+        postcode="BN7 2AA",
+        description="Publisher advertising copy",
+        manual_verified=True,
+        sources=[
+            SourceRef(
+                "The Lewesian",
+                "local_publisher",
+                "C",
+                source_url="https://thelewesian.co.uk/",
+                usage_mode="discovery_only",
+                content_policy="facts_only",
+            )
+        ],
+    )
+    validate_records([record], LOCATION, POLICY)
+    assert not record.publish_safe
+    assert "discovery_only_unverified" in record.quality_flags
+    assert "canonical_verification_required" in record.quality_flags
+    assert "description_rights_unverified" in record.quality_flags
+
+
+def test_publisher_lead_can_publish_after_business_owned_verification():
+    record = ListingRecord(
+        name="Example Advertiser",
+        primary_category="shops",
+        address="1 High Street, Lewes",
+        postcode="BN7 2AA",
+        website="https://example.test/",
+        sources=[
+            SourceRef(
+                "The Lewesian",
+                "local_publisher",
+                "C",
+                usage_mode="discovery_only",
+                content_policy="facts_only",
+            ),
+            SourceRef("Example Advertiser", "organisation_owned_website", "B"),
+        ],
+    )
+    validate_records([record], LOCATION, POLICY)
+    assert record.publish_safe
+    assert "discovery_only_unverified" not in record.quality_flags

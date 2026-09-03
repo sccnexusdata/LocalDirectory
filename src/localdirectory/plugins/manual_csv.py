@@ -25,11 +25,18 @@ class ManualCSVPlugin:
                     continue
                 source_url = (row.get("source_url") or "").strip()
                 source_name = (row.get("source_name") or "LewesLive existing directory").strip()
+                usage_mode = _usage_mode(row.get("usage_mode"))
+                content_policy = (row.get("content_policy") or "structured_facts").strip().casefold()
+                source_class = (row.get("source_class") or "F").strip().upper()
+                discovery_only = usage_mode == "discovery_only"
                 record = ListingRecord(
                     name=row["name"].strip(),
                     listing_type=(row.get("listing_type") or "place").strip(),
                     primary_category=(row.get("primary_category") or "other").strip(),
-                    description=(row.get("description") or "").strip(),
+                    # Publisher copy may identify a lead, but it is not imported as
+                    # directory copy. A verified source can later supply structured
+                    # facts from which LewesLive writes its own description.
+                    description="" if discovery_only else (row.get("description") or "").strip(),
                     website=(row.get("website") or "").strip(),
                     phone=(row.get("phone") or "").strip(),
                     email=(row.get("email") or "").strip(),
@@ -42,8 +49,18 @@ class ManualCSVPlugin:
                     address_public=_bool(row.get("address_public"), True),
                     phone_public=_bool(row.get("phone_public"), True),
                     email_public=_bool(row.get("email_public"), True),
-                    manual_verified=_bool(row.get("manual_verified"), False),
-                    sources=[SourceRef(source_name, "manual", "F", source_url=source_url)],
+                    manual_verified=False if discovery_only else _bool(row.get("manual_verified"), False),
+                    quality_flags=["publisher_copy_suppressed"] if discovery_only and (row.get("description") or "").strip() else [],
+                    sources=[
+                        SourceRef(
+                            source_name,
+                            "manual",
+                            source_class,
+                            source_url=source_url,
+                            usage_mode=usage_mode,
+                            content_policy=content_policy,
+                        )
+                    ],
                 )
                 records.append(record)
         return HarvestResult(self.name, records=records, message=f"Loaded {len(records)} manual rows")
@@ -63,3 +80,8 @@ def _float_or_none(value: str | None) -> float | None:
     if value is None or not value.strip():
         return None
     return float(value)
+
+
+def _usage_mode(value: str | None) -> str:
+    normalised = (value or "verification").strip().casefold().replace("-", "_")
+    return "discovery_only" if normalised in {"discovery", "discovery_only"} else "verification"

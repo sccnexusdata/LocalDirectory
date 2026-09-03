@@ -29,6 +29,27 @@ sources:
     purpose: broad legacy candidate discovery only; freshness must be checked independently
     url: https://lewes.co.uk/business/
     adapter: planned_directory_recipe
+    usage_mode: discovery_only
+    content_policy: facts_only
+    canonical_verification_required: true
+  - name: The Lewesian
+    class: C
+    purpose: advertiser and community-listing discovery; facts must be verified at the organisation's canonical source
+    url: https://thelewesian.co.uk/2026-back-copies/
+    adapter: manual_discovery_only
+    usage_mode: discovery_only
+    content_policy: facts_only
+    media_policy: do_not_reuse_without_permission
+    canonical_verification_required: true
+  - name: Lewes News / Lewes Times
+    class: C
+    purpose: potential local advertiser and listing discovery after publisher identity and official online presence are confirmed
+    adapter: manual_discovery_only
+    usage_mode: discovery_only
+    content_policy: facts_only
+    media_policy: do_not_reuse_without_permission
+    canonical_verification_required: true
+    status: publisher_identity_verification_required
   - name: CQC
     class: A
     purpose: regulated health and care provider verification

@@ -9,6 +9,19 @@
 - **E — search/social discovery:** candidate discovery only unless separately corroborated.
 - **F — manual:** LewesLive/SCC Nexus Data curated entry. `manual_verified=true` is an explicit human decision.
 
+## Source usage and rights
+
+Evidence class describes authority; `usage_mode` describes what the engine may do with it.
+
+- **verification:** evidence that may support publication under the category-aware rules below.
+- **discovery_only:** a lead, never publication evidence. It does not count as independent corroboration and cannot be promoted by `manual_verified` alone.
+
+Local newspapers, magazines, search results and third-party directories are normally `discovery_only`. From them the engine may note non-creative facts needed to locate the subject. Before publication it must verify those facts at a durable canonical source such as the organiser's or business's own website, an official register, an authorised ticketing page, or direct documented confirmation.
+
+`content_policy: facts_only` means descriptions, slogans, advert artwork, photographs, logos and page layout are not copied. Publisher text supplied through the manual CSV is suppressed automatically. Media is accepted only when it is owned by LewesLive, supplied with permission, or covered by a recorded licence.
+
+Free-to-read does not mean free to republish. The correction/takedown route remains available for any source or subject that disputes an entry.
+
 ## Category-aware verification
 
 A directory should not pretend all categories have identical verification rules. A future regulated-source layer can attach regulator IDs and evidence for food premises, care services, charities, gas/electrical work and other regulated categories without turning the directory into an endorsement service.

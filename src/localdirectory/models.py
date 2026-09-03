@@ -17,6 +17,8 @@ class SourceRef:
     source_id: str = ""
     source_url: str = ""
     retrieved_at: str = field(default_factory=utc_now_iso)
+    usage_mode: str = "verification"
+    content_policy: str = "structured_facts"
 
     def key(self) -> tuple[str, str, str]:
         return (self.source_name.casefold(), self.source_type.casefold(), self.source_id)
@@ -74,6 +76,8 @@ class ListingRecord:
                     "source_class": s.source_class,
                     "source_url": s.source_url,
                     "retrieved_at": s.retrieved_at,
+                    "usage_mode": s.usage_mode,
+                    "content_policy": s.content_policy,
                 }
                 for s in self.sources
             ]

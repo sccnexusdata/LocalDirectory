@@ -8,6 +8,11 @@ from pathlib import Path
 
 FORBIDDEN_KEYS = {"manual_verified", "field_provenance"}
 BLOCKING_FLAG_PREFIXES = ("field_conflict:", "entity_resolution_conflict:")
+RIGHTS_BLOCKING_FLAGS = {
+    "canonical_verification_required",
+    "description_rights_unverified",
+    "discovery_only_unverified",
+}
 
 
 def validate(bundle: Path) -> list[str]:
@@ -39,6 +44,16 @@ def validate(bundle: Path) -> list[str]:
                     errors.append(f"record {index} exposes unresolved identity/field conflict")
                 if "identity_or_field_conflict" in flags:
                     errors.append(f"record {index} exposes identity_or_field_conflict")
+                if RIGHTS_BLOCKING_FLAGS.intersection(flags):
+                    errors.append(f"record {index} exposes unresolved source-rights gate")
+                sources = record.get("sources") or []
+                verification_sources = [
+                    source
+                    for source in sources
+                    if str(source.get("usage_mode") or "verification").casefold() != "discovery_only"
+                ]
+                if not verification_sources:
+                    errors.append(f"record {index} has no publication-verification source")
                 if not record.get("address_public", True):
                     for key in ("address", "postcode"):
                         if record.get(key):

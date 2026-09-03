@@ -17,6 +17,8 @@ LocalDirectory applies the architecture learned from LocalEventsEngine to persis
 7. suppress potentially private registered-office/residential location data;
 8. produce internal, review and public/presentation-site outputs separately.
 
+Publisher, search and legacy-directory material is treated as a lead rather than reusable copy: facts are checked against a canonical organisation-owned or official source, descriptions are written afresh, and artwork/photos/logos require recorded permission or a licence. `discovery_only` evidence cannot unlock publication or count as corroboration.
+
 **Listings are signposts, not recommendations.** Publication does not constitute endorsement, safety assurance or a guarantee of qualifications, insurance, regulated status, price or current availability.
 
 ## Current source adapters

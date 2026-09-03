@@ -25,6 +25,13 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
     rejected = 0
     for record in records:
         flags = set(record.quality_flags)
+        flags.difference_update(
+            {
+                "canonical_verification_required",
+                "description_rights_unverified",
+                "discovery_only_unverified",
+            }
+        )
         if not record.name:
             flags.add("missing_name")
         if record.primary_category == "other":
@@ -37,8 +44,14 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
         if record.listing_type == "service_provider" and not (service_match or is_local_place or record.postcode):
             flags.add("service_area_unconfirmed")
 
-        source_classes = {source.source_class.upper() for source in record.sources}
-        source_names = {source.source_name.casefold() for source in record.sources}
+        verification_sources = [
+            source for source in record.sources if source.usage_mode.casefold() != "discovery_only"
+        ]
+        discovery_sources = [
+            source for source in record.sources if source.usage_mode.casefold() == "discovery_only"
+        ]
+        source_classes = {source.source_class.upper() for source in verification_sources}
+        source_names = {source.source_name.casefold() for source in verification_sources}
         independent_sources = len(source_names)
         official = "A" in source_classes
         owned = "B" in source_classes
@@ -46,6 +59,12 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
             independent_sources == 1
             and any("charity commission" in name for name in source_names)
         )
+
+        if discovery_sources and not verification_sources:
+            flags.add("discovery_only_unverified")
+            flags.add("canonical_verification_required")
+            if record.description:
+                flags.add("description_rights_unverified")
 
         if independent_sources == 1:
             flags.add("single_source_only")
@@ -72,6 +91,7 @@ def validate_records(records: list[ListingRecord], location: dict, policy: dict)
 
         publish = bool(
             core_ok
+            and bool(verification_sources)
             and not blocking_conflict
             and not charity_commission_only
             and (
