@@ -1,12 +1,21 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-31T15:57:38+00:00",
+  "generated_at": "2026-09-07T13:03:41+00:00",
   "site": "leweslive",
-  "feed_promoted": true,
-  "preserved_previous_feed": false,
-  "coverage_ready": true,
-  "failed_critical_sources": [],
-  "failed_coverage_checks": [],
+  "feed_promoted": false,
+  "preserved_previous_feed": true,
+  "coverage_ready": false,
+  "failed_critical_sources": [
+    "osm_overpass"
+  ],
+  "failed_coverage_checks": [
+    "minimum_publish_safe",
+    "minimum_priority_categories_with_3_records",
+    "minimum_trade_categories_with_2_records",
+    "minimum_website_coverage",
+    "minimum_contact_coverage",
+    "minimum_multi_source_coverage"
+  ],
   "source_summary": [
     {
       "source": "manual_csv",
@@ -30,8 +39,8 @@
     },
     {
       "source": "osm_overpass",
-      "ok": true,
-      "records": 4485
+      "ok": false,
+      "records": 0
     },
     {
       "source": "owned_accommodation",
@@ -56,7 +65,7 @@
     {
       "source": "json_ld",
       "ok": true,
-      "records": 67
+      "records": 34
     },
     {
       "source": "postcode_enrichment",
@@ -65,57 +74,50 @@
     }
   ],
   "metrics": {
-    "publish_safe_records": 260,
+    "publish_safe_records": 184,
     "category_counts": {
-      "accommodation": 6,
-      "beauty_and_hair": 4,
-      "builders_general_trades": 1,
-      "business_professional": 7,
-      "cleaning_windows_property_care": 1,
-      "community_charities": 45,
-      "education_childcare": 10,
-      "food_and_drink": 100,
+      "accommodation": 2,
+      "beauty_and_hair": 2,
+      "community_charities": 7,
+      "education_childcare": 9,
+      "food_and_drink": 93,
       "food_producers": 12,
-      "garages_vehicle_services": 5,
-      "health_care": 10,
-      "public_services": 2,
-      "shops": 57
+      "health_care": 6,
+      "shops": 53
     },
     "priority_categories_total": 19,
-    "priority_categories_with_3_records": 10,
+    "priority_categories_with_3_records": 6,
     "priority_categories_meeting_depth": [
-      "accommodation",
-      "beauty_and_hair",
-      "business_professional",
       "community_charities",
       "education_childcare",
       "food_and_drink",
       "food_producers",
-      "garages_vehicle_services",
       "health_care",
       "shops"
     ],
     "missing_priority_categories": [
+      "builders_general_trades",
+      "business_professional",
       "carpenters_joiners",
+      "cleaning_windows_property_care",
       "electricians",
+      "garages_vehicle_services",
       "gardeners_landscaping_trees",
       "painters_decorators",
       "plumbers_heating",
+      "public_services",
       "roofing_chimneys_guttering"
     ],
     "trade_categories_total": 10,
-    "trade_categories_with_2_records": 2,
-    "trade_categories_meeting_depth": [
-      "business_professional",
-      "garages_vehicle_services"
-    ],
-    "website_coverage": 0.4038,
-    "phone_coverage": 0.2538,
-    "email_coverage": 0.0462,
-    "contact_coverage": 0.4115,
+    "trade_categories_with_2_records": 0,
+    "trade_categories_meeting_depth": [],
+    "website_coverage": 0.0489,
+    "phone_coverage": 0.0326,
+    "email_coverage": 0.0109,
+    "contact_coverage": 0.0543,
     "geocoded_coverage": 1.0,
-    "postcode_coverage": 0.9923,
-    "multi_source_coverage": 0.4846,
-    "authoritative_or_owned_coverage": 0.9654
+    "postcode_coverage": 0.9891,
+    "multi_source_coverage": 0.0326,
+    "authoritative_or_owned_coverage": 0.9891
   }
 }
